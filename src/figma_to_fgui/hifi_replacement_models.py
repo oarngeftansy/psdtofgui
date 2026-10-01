@@ -13,7 +13,7 @@ HifiMappingStatus = Literal[
 HifiMappingAction = Literal["accept", "retarget", "keep_old", "add_visual", "exception", "preserve_structure"]
 LegacyVisualDisposition = Literal["preserve", "retire", "other_state", "structural"]
 LogicalBoundsPolicy = Literal["preserve", "resize"]
-HIFI_MAPPING_POLICY_REVISION = 25
+HIFI_MAPPING_POLICY_REVISION = 26
 
 
 class HifiTargetRef(StrictVersionedModel):
@@ -194,13 +194,7 @@ class HifiMappingItem(StrictVersionedModel):
     graph_conversion_proven: bool = False
     default_visible: bool | None = None
     preserve_runtime_text: bool = False
-    # Runtime identity and visual contribution are separate concerns.  A legacy
-    # object may stay addressable by ID/controllers/relations while contributing
-    # no pixels to the PSD target state.
     visual_disposition: LegacyVisualDisposition = "preserve"
-    # Component size is part of the runtime/layout contract.  PSD visual bounds
-    # do not authorize resizing that logical box unless a later audit explicitly
-    # proves it safe.
     logical_bounds_policy: LogicalBoundsPolicy = "preserve"
 
 
@@ -291,7 +285,6 @@ class HifiPsdReplacementCreate(StrictVersionedModel):
 
 class HifiPsdBatchReplacementCreate(StrictVersionedModel):
     psd_source_id: Sha256 = Field(pattern=r"^[0-9a-f]{64}$")
-    # A JSON payload carries an array; the strict model keeps it a list.
     targets: list[HifiTargetRef] = Field(min_length=1, max_length=20)
     idempotency_key: str = Field(min_length=1, max_length=200)
 
