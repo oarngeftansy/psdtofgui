@@ -469,9 +469,28 @@ class HifiReplacementWorkflow:
             include_states=len(current.view.selection_id) == 64,
             inventory=inventory,
         )
+        selected_item = next(
+            (item for item in current.mapping.items if item.item_id == decision.item_id),
+            None,
+        )
         try:
-            mapping = apply_mapping_decision(current.mapping, decision, manifest,
-                conversion_object_ids=frozenset(o.object_id for o in inventory.objects if o.raster_conversion_allowed))
+            # ``keep_old`` is a runtime-identity decision.  Policy 25 may have
+            # already classified the object's target-state pixels as retired
+            # (or as another-state/structural).  Re-confirming keep_old in the
+            # review UI must not turn that policy result back into visible
+            # legacy paint.
+            if (
+                selected_item is not None
+                and decision.action == "keep_old"
+                and selected_item.action == "keep_old"
+                and selected_item.visual_disposition != "preserve"
+            ):
+                mapping = current.mapping.model_copy(update={
+                    "mapping_revision": current.mapping.mapping_revision + 1,
+                })
+            else:
+                mapping = apply_mapping_decision(current.mapping, decision, manifest,
+                    conversion_object_ids=frozenset(o.object_id for o in inventory.objects if o.raster_conversion_allowed))
         except ValueError as error:
             code = getattr(error, "code", "invalid_mapping")
             raise HifiReplacementStoreError(code) from error
