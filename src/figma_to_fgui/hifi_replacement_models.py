@@ -13,7 +13,34 @@ HifiMappingStatus = Literal[
 HifiMappingAction = Literal["accept", "retarget", "keep_old", "add_visual", "exception", "preserve_structure"]
 LegacyVisualDisposition = Literal["preserve", "retire", "other_state", "structural"]
 LogicalBoundsPolicy = Literal["preserve", "resize"]
-HIFI_MAPPING_POLICY_REVISION = 26
+# Keep the wire revision at 25 because the web/plugin strict parser is shared
+# with deployed local clients.  The policy-26 render-contribution correction is
+# backward-compatible at the wire level and is applied by HifiMappingDraft's
+# PSD post-validation pass below.
+HIFI_MAPPING_POLICY_REVISION = 25
+
+
+def _mapping_scope(object_id: str | None) -> str:
+    if not object_id or ":" not in object_id:
+        return ""
+    return object_id.rsplit(":", 1)[0]
+
+
+def _bounds_coverage(
+    target: tuple[float, float, float, float],
+    cover: tuple[float, float, float, float],
+) -> float:
+    tx, ty, tw, th = target
+    cx, cy, cw, ch = cover
+    if min(tw, th, cw, ch) <= 0:
+        return 0.0
+    left = max(tx, cx)
+    top = max(ty, cy)
+    right = min(tx + tw, cx + cw)
+    bottom = min(ty + th, cy + ch)
+    if right <= left or bottom <= top:
+        return 0.0
+    return ((right - left) * (bottom - top)) / (tw * th)
 
 
 class HifiTargetRef(StrictVersionedModel):
@@ -221,6 +248,74 @@ class HifiMappingDraft(StrictVersionedModel):
     source_canvas_size: tuple[PositiveFloat, PositiveFloat] | None = None
     items: tuple[HifiMappingItem, ...]
     unresolved_count: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def retire_replaced_psd_visuals(self) -> Self:
+        """Apply policy-26 render ownership without changing the wire schema.
+
+        A PSD target is pixel authority for the selected state.  If an old
+        graph/image/loader has no PSD correspondence but another mapped visual
+        in the same instance scope covers its bounds, keeping the old pixels is
+        a duplicate render contribution.  Preserve the old object identity but
+        mark its target-state visual contribution retired.
+
+        This deliberately does not touch text/components or hidden-state items.
+        It also requires strong geometric coverage to avoid retiring unrelated
+        controls that merely overlap in the full screen.
+        """
+        psd_mapping = any(
+            (item.figma_node_id or "").startswith("psd-")
+            or (item.owned_group_id or "").startswith("psd-")
+            or (item.composite_group_id or "").startswith("psd-")
+            for item in self.items
+        )
+        if not psd_mapping:
+            return self
+
+        visual_types = {"graph", "image", "loader"}
+        mapped = tuple(
+            item
+            for item in self.items
+            if item.action in {"accept", "retarget"}
+            and item.old_object_id is not None
+            and (item.old_object_type or "").casefold() in visual_types | {"component"}
+            and item.figma_bounds is not None
+            and item.default_visible is not False
+        )
+        revised: list[HifiMappingItem] = []
+        changed = False
+        for item in self.items:
+            if (
+                item.status != "fgui_only"
+                or item.action != "keep_old"
+                or item.old_object_id is None
+                or item.old_bounds is None
+                or (item.old_object_type or "").casefold() not in visual_types
+                or item.default_visible is False
+                or item.visual_disposition in {"other_state", "structural"}
+            ):
+                revised.append(item)
+                continue
+
+            scope = _mapping_scope(item.old_object_id)
+            replacement = any(
+                candidate.old_object_id != item.old_object_id
+                and _mapping_scope(candidate.old_object_id) == scope
+                and candidate.figma_bounds is not None
+                and _bounds_coverage(item.old_bounds, candidate.figma_bounds) >= 0.80
+                for candidate in mapped
+            )
+            if replacement and item.visual_disposition != "retire":
+                item = item.model_copy(update={"visual_disposition": "retire"})
+                changed = True
+            revised.append(item)
+
+        if not changed:
+            return self
+        return self.model_copy(update={
+            "items": tuple(revised),
+            "unresolved_count": sum(item.action is None for item in revised),
+        })
 
 
 class HifiDiffItem(StrictVersionedModel):
