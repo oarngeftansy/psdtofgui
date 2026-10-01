@@ -14,9 +14,8 @@ HifiMappingAction = Literal["accept", "retarget", "keep_old", "add_visual", "exc
 LegacyVisualDisposition = Literal["preserve", "retire", "other_state", "structural"]
 LogicalBoundsPolicy = Literal["preserve", "resize"]
 # Keep the wire revision at 25 because the web/plugin strict parser is shared
-# with deployed local clients.  The policy-26 render-contribution correction is
-# backward-compatible at the wire level and is applied by HifiMappingDraft's
-# PSD post-validation pass below.
+# with deployed local clients. The policy-26 render-contribution correction is
+# wire-compatible and is applied by HifiMappingDraft's PSD post-validation pass.
 HIFI_MAPPING_POLICY_REVISION = 25
 
 
@@ -41,6 +40,17 @@ def _bounds_coverage(
     if right <= left or bottom <= top:
         return 0.0
     return ((right - left) * (bottom - top)) / (tw * th)
+
+
+def _bounds_area_ratio(
+    left: tuple[float, float, float, float],
+    right: tuple[float, float, float, float],
+) -> float:
+    left_area = max(0.0, left[2]) * max(0.0, left[3])
+    right_area = max(0.0, right[2]) * max(0.0, right[3])
+    if min(left_area, right_area) <= 0:
+        return float("inf")
+    return max(left_area, right_area) / min(left_area, right_area)
 
 
 class HifiTargetRef(StrictVersionedModel):
@@ -253,15 +263,11 @@ class HifiMappingDraft(StrictVersionedModel):
     def retire_replaced_psd_visuals(self) -> Self:
         """Apply policy-26 render ownership without changing the wire schema.
 
-        A PSD target is pixel authority for the selected state.  If an old
+        A PSD target is pixel authority for the selected state. If an old
         graph/image/loader has no PSD correspondence but another mapped visual
-        in the same instance scope covers its bounds, keeping the old pixels is
-        a duplicate render contribution.  Preserve the old object identity but
-        mark its target-state visual contribution retired.
-
-        This deliberately does not touch text/components or hidden-state items.
-        It also requires strong geometric coverage to avoid retiring unrelated
-        controls that merely overlap in the full screen.
+        in the same instance scope covers roughly the same visual footprint,
+        keeping the old pixels is a duplicate render contribution. Preserve the
+        old object identity but retire its target-state visual contribution.
         """
         psd_mapping = any(
             (item.figma_node_id or "").startswith("psd-")
@@ -303,6 +309,7 @@ class HifiMappingDraft(StrictVersionedModel):
                 and _mapping_scope(candidate.old_object_id) == scope
                 and candidate.figma_bounds is not None
                 and _bounds_coverage(item.old_bounds, candidate.figma_bounds) >= 0.80
+                and _bounds_area_ratio(item.old_bounds, candidate.figma_bounds) <= 2.25
                 for candidate in mapped
             )
             if replacement and item.visual_disposition != "retire":
