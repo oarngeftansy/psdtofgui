@@ -317,12 +317,14 @@ class HifiMappingDraft(StrictVersionedModel):
                 changed = True
             revised.append(item)
 
-        if not changed:
-            return self
-        return self.model_copy(update={
-            "items": tuple(revised),
-            "unresolved_count": sum(item.action is None for item in revised),
-        })
+        if changed:
+            object.__setattr__(self, "items", tuple(revised))
+            object.__setattr__(
+                self,
+                "unresolved_count",
+                sum(item.action is None for item in revised),
+            )
+        return self
 
 
 class HifiDiffItem(StrictVersionedModel):
