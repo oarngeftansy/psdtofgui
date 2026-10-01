@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<component size="320,180" opaque="false" mask="a0b4bbac">
+  <displayList>
+    <graph id="a0b4bbac" name="a0b4bbac" xy="0,0" size="100,80" type="rect" corner="2.5,3.5,5.5,4.5"/>
+    <text id="e2925f31" name="e2925f31" xy="4,5" size="20,12" fontSize="12.5" color="#112233" align="center" vAlign="middle" autoSize="none" strokeColor="#445566" strokeSize="1.25" text="A &amp; &lt;B&gt; &quot;quoted&quot;&#10;"/>
+  </displayList>
+</component>

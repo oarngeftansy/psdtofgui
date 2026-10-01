@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "documentId": "uir:generic-mask-review",
+  "compilerVersion": "uir-v1",
+  "source": {
+    "kind": "figma",
+    "revision": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "selectionId": "generic-mask-review"
+  },
+  "roots": ["node:canvas"],
+  "nodes": {
+    "node:canvas": {
+      "id": "node:canvas",
+      "source": {
+        "nodeId": "canvas",
+        "type": "FRAME",
+        "name": "Mask review canvas",
+        "fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "semantic": {},
+      "children": ["node:content"],
+      "zIndex": 0,
+      "geometry": {"resolvedBounds": {"x": 0, "y": 0, "width": 240, "height": 160}},
+      "visual": {
+        "mask": {
+          "kind": "rectangle",
+          "maskNodeRef": "node:missing-mask",
+          "contentNodeRefs": ["node:content"],
+          "safeRasterRootRef": null,
+          "effects": []
+        }
+      },
+      "conversion": {"mode": "native"}
+    },
+    "node:content": {
+      "id": "node:content",
+      "source": {
+        "nodeId": "content",
+        "type": "TEXT",
+        "name": "Mask review content",
+        "fingerprint": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "semantic": {},
+      "parentId": "node:canvas",
+      "zIndex": 0,
+      "geometry": {"resolvedBounds": {"x": 12, "y": 12, "width": 160, "height": 28}},
+      "text": {"content": "Review required"},
+      "conversion": {"mode": "native"}
+    }
+  }
+}

@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<packageDescription id="4fb3fc4f">
+  <resources>
+    <component id="3a1d8c96" name="Root-3a1d8c96.xml" path="/Panel/"/>
+    <image id="a70706db" name="asset-nine-slice-a70706db.png" path="/Img/" scale="9grid" scale9grid="0,0,1,1"/>
+  </resources>
+  <publish/>
+</packageDescription>

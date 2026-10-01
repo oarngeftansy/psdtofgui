@@ -1,0 +1,11 @@
+{
+    auto_https off
+    admin off
+}
+
+http://127.0.0.1:8780 {
+    reverse_proxy 127.0.0.1:8765 {
+        header_up X-Figma-Gateway-Token {$FGUI_GATEWAY_SECRET}
+    }
+}
+

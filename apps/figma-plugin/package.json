@@ -1,0 +1,18 @@
+{
+  "name": "figma-to-fairygui-plugin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:check": "node --test scripts/build.check.mjs",
+    "test": "vitest run && node --test scripts/build.check.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "1.117.0",
+    "esbuild": "0.25.0",
+    "typescript": "5.7.3",
+    "vitest": "3.0.5"
+  }
+}

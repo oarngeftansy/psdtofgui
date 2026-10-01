@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=640, initial-scale=1">
+  <title>Writer 竖屏审核流程演示</title>
+  <style>
+    :root { color-scheme:light; font-family:"Microsoft YaHei UI","PingFang SC",system-ui,sans-serif; --ink:#172033; --muted:#69758a; --line:#d8e0eb; --blue:#1f63c6; --green:#28784a; --amber:#9a6513; --red:#a93636; }
+    * { box-sizing:border-box; }
+    html,body { width:640px; height:800px; margin:0; overflow:hidden; background:#e9eef5; color:var(--ink); }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible,input:focus-visible,summary:focus-visible { outline:3px solid #8db7f5; outline-offset:2px; }
+    [hidden] { display:none !important; }
+    .plugin-window { width:640px; height:800px; display:grid; grid-template-rows:auto minmax(0,1fr) auto; overflow:hidden; background:#f6f8fb; }
+    .topbar { padding:14px 20px 12px; border-bottom:1px solid var(--line); background:#fff; }
+    .brand-row,.step-head,.item-nav,.action-footer,.summary-head,.copy-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { font-size:16px; font-weight:900; letter-spacing:-.02em; }
+    .selection { color:#5d6980; font-size:11px; }
+    .selection strong { color:#26344a; }
+    .step-rail { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .step-dot { position:relative; padding-top:10px; border-top:3px solid #d7deea; color:#7b879a; font-size:11px; text-align:center; }
+    .step-dot::before { content:""; position:absolute; top:-7px; left:50%; width:10px; height:10px; transform:translateX(-50%); border:2px solid #fff; border-radius:50%; background:#c8d1df; }
+    .step-dot.active { border-color:var(--blue); color:#184f9f; font-weight:900; }
+    .step-dot.active::before { background:var(--blue); }
+    .step-dot.done { border-color:#6eaa82; color:#37734a; }
+    .step-dot.done::before { background:#5e9e74; }
+    .step-screen { min-height:0; overflow:hidden; animation:screen-in .22s ease both; }
+    .step-scroll { height:100%; min-height:0; padding:18px 20px 28px; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; }
+    .step-scroll::-webkit-scrollbar { width:9px; }
+    .step-scroll::-webkit-scrollbar-thumb { border:2px solid transparent; border-radius:99px; background:#aeb9c8; background-clip:padding-box; }
+    .eyebrow { color:#66758e; font-size:10px; font-weight:900; letter-spacing:.09em; text-transform:uppercase; }
+    h1,h2,h3,p { margin:0; }
+    h1 { margin-top:3px; font-size:24px; letter-spacing:-.035em; }
+    h2 { font-size:17px; }
+    h3 { font-size:13px; }
+    .lead { margin-top:6px; color:#667287; font-size:12px; line-height:1.55; }
+    .count-pill,.method,.status-pill { padding:5px 9px; border-radius:999px; font-size:10px; font-weight:900; }
+    .count-pill { background:#e7f4eb; color:var(--green); }
+    .automatic-list { display:grid; gap:12px; margin-top:16px; }
+    .automatic-item { display:grid; grid-template-columns:138px minmax(0,1fr); gap:14px; padding:12px; border:1px solid var(--line); border-radius:13px; background:#fff; box-shadow:0 4px 14px #34455d0a; }
+    .mini-pair { display:grid; grid-template-columns:1fr 1fr; gap:5px; height:104px; }
+    .mini-preview { position:relative; overflow:hidden; border:1px solid #d8e0e9; border-radius:8px; background:#edf1f5; }
+    .phone { position:absolute; inset:9px 13px; border:2px solid #3c4c62; border-radius:6px; background:#dce5cf; box-shadow:0 4px 8px #26384d20; }
+    .phone::before { content:""; position:absolute; left:10%; right:10%; top:10%; height:34%; border-radius:4px; background:radial-gradient(circle at 50% 50%,#6f9858 0 13%,#bed0a0 14% 30%,#7d9869 31% 33%,#d4dfbf 34%); }
+    .phone::after { content:""; position:absolute; left:10%; right:10%; bottom:9%; height:39%; border-radius:3px; background:linear-gradient(#f4edda 0 29%,#b48245 30% 52%,#f5eedc 53% 75%,#70a54d 76%); }
+    .mini-preview.generated .phone { border-color:#21466e; transform:translateY(1px); }
+    .auto-copy { min-width:0; }
+    .method { display:inline-block; margin-bottom:7px; background:#e8f4ec; color:var(--green); }
+    .method.raster { background:#edf2fa; color:#355f98; }
+    .auto-copy p { margin-top:5px; color:#647084; font-size:11px; line-height:1.55; }
+    .impact { display:flex; gap:6px; margin-top:9px; }
+    .impact span { padding:4px 7px; border-radius:6px; background:#f1f4f8; color:#59667a; font-size:9px; font-weight:800; }
+    .quiet-details { margin-top:14px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+    .quiet-details summary { padding:11px 12px; color:#566479; font-size:11px; font-weight:900; cursor:pointer; }
+    .detail-body { padding:0 12px 12px; color:#667287; font:10px/1.65 ui-monospace,"Cascadia Mono",monospace; }
+    .review-header { margin-bottom:13px; }
+    .item-nav { margin-top:12px; }
+    .nav-actions { display:flex; gap:7px; }
+    .nav-actions button { min-width:68px; min-height:32px; border:1px solid #b6c1d1; border-radius:8px; background:#fff; color:#3c4c63; font-size:11px; font-weight:800; }
+    #review-counter { color:#4f5d72; font-size:11px; font-weight:900; }
+    .review-record { animation:evidence-in .2s ease both; }
+    .review-title { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px; }
+    .review-title p { margin-top:4px; color:#6c778a; font-size:10px; }
+    .status-pill { flex:none; background:#fff0cf; color:var(--amber); }
+    .comparison-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .preview-label { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; color:#57647a; font-size:10px; font-weight:900; }
+    .preview-label span { color:#8993a3; font-weight:700; }
+    .preview-canvas { position:relative; width:100%; height:286px; overflow:hidden; border:1px solid #ced8e5; border-radius:11px; background:linear-gradient(145deg,#e8ecf1,#dce3eb); }
+    .context-frame { position:absolute; inset:16px 48px; border:2px solid #42536a; border-radius:9px; background:#d8e2c8; box-shadow:0 8px 18px #27394e2b; }
+    .context-top { position:absolute; left:9%; right:9%; top:7%; height:36%; border-radius:5px; background:radial-gradient(circle at 50% 50%,#6f9857 0 10%,#b7cd97 11% 27%,#779366 28% 31%,#d3dfbd 32%); }
+    .context-mid { position:absolute; left:9%; right:9%; top:48%; height:18%; border-radius:4px; background:linear-gradient(90deg,#f2ead7 0 30%,#bc8848 31% 69%,#f2ead7 70%); }
+    .context-bottom { position:absolute; left:9%; right:9%; bottom:7%; height:22%; border-radius:4px; background:linear-gradient(#f3ecda 0 52%,#70a54d 53%); }
+    .context-node { position:absolute; left:20%; right:20%; top:44%; height:28%; border:3px solid #e19b19; border-radius:7px; box-shadow:0 0 0 3px #fff8; }
+    .context-node::before { content:"待审核"; position:absolute; top:-23px; left:-3px; padding:3px 6px; border-radius:5px 5px 5px 0; background:#d98900; color:#fff; font-size:9px; font-weight:900; white-space:nowrap; }
+    .generated-preview .context-frame { border-color:#21466d; background:#dce5cc; }
+    .generated-preview .context-node { border-color:#d3782d; }
+    .generated-preview .context-node::before { content:"转换结果"; background:#b85f21; }
+    [data-kind="instance"] .context-frame { background:#d9e0ec; }
+    [data-kind="instance"] .context-top { height:27%; background:linear-gradient(135deg,#7e97bd,#bbc7db); }
+    [data-kind="instance"] .context-mid { top:40%; height:25%; background:linear-gradient(90deg,#edf1f7 0 47%,#93a7c6 48% 52%,#edf1f7 53%); }
+    [data-kind="instance"] .context-bottom { background:linear-gradient(90deg,#6d89b4 0 31%,#ecf0f6 32% 68%,#6d89b4 69%); }
+    .review-explanation { margin-top:11px; padding:11px 12px; border-left:4px solid #d08b17; border-radius:8px; background:#fff7e7; }
+    .review-explanation strong { font-size:11px; }
+    .review-explanation p { margin-top:4px; color:#695a3d; font-size:10px; line-height:1.55; }
+    .choice-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+    .choice { padding:9px; border:1px solid #d5dde8; border-radius:8px; background:#fff; color:#4e5b70; font-size:10px; text-align:left; }
+    .choice.selected { border-color:#5b8fd6; background:#eef5ff; color:#245997; font-weight:900; }
+    .ack-row { display:flex; align-items:flex-start; gap:8px; margin-top:10px; padding:10px; border-radius:8px; background:#f0f4f9; color:#4f5c70; font-size:10px; font-weight:800; }
+    .ack-row input { width:16px; height:16px; margin:0; }
+    .copy-card { margin-top:12px; padding:11px; border:1px solid #cbd7e6; border-radius:11px; background:#eef3f9; }
+    .copy-head strong { font-size:11px; }
+    #copy-message { color:#607087; font-size:9px; }
+    .figma-canvas-demo { position:relative; height:118px; margin-top:9px; overflow:hidden; border-radius:8px; background-color:#d9dce2; background-image:radial-gradient(#aeb5bf 1px,transparent 1px); background-size:12px 12px; }
+    .canvas-frame { position:absolute; top:17px; width:72px; height:84px; border:2px solid #3d4f67; border-radius:5px; background:#d9e4ca; box-shadow:0 5px 10px #28394f25; transition:transform .24s ease,opacity .2s ease; }
+    .source-frame { left:105px; }
+    .review-frame { left:292px; width:146px; border-color:#1f63c6; background:#fff; opacity:.18; transform:translateX(-150px) scale(.84); }
+    .review-frame::before { content:"FairyGUI 待审核"; position:absolute; top:6px; left:8px; color:#245caa; font-size:8px; font-weight:900; }
+    .review-frame::after { content:"原图  →  结果"; position:absolute; left:8px; right:8px; top:25px; height:43px; padding-top:11px; border:1px solid #ccd8e8; border-radius:4px; background:linear-gradient(90deg,#dce6cd 0 46%,#fff 47% 53%,#dce6cd 54%); color:#55657b; font-size:8px; text-align:center; }
+    .figma-canvas-demo[data-copy-state="copying"] .review-frame,.figma-canvas-demo[data-copy-state="copied"] .review-frame { opacity:1; transform:translateX(0) scale(1); }
+    .canvas-arrow { position:absolute; top:52px; left:202px; color:#68768a; font-size:17px; font-weight:900; }
+    .confirm-card { margin-top:16px; padding:16px; border:1px solid var(--line); border-radius:13px; background:#fff; }
+    .check-list { display:grid; gap:9px; margin-top:13px; }
+    .check-row { display:flex; align-items:center; gap:9px; color:#4d5b70; font-size:11px; }
+    .check-icon { display:grid; width:21px; height:21px; place-items:center; border-radius:50%; background:#e5f3e9; color:var(--green); font-weight:900; }
+    .archive { display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:14px; padding:11px; border-radius:9px; background:#eef3f9; }
+    .archive strong { font:700 11px ui-monospace,"Cascadia Mono",monospace; }
+    .archive span { color:#647185; font-size:10px; }
+    .engineering-panel { margin-top:8px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#fafbfd; color:#5e6a7e; font:10px/1.65 ui-monospace,"Cascadia Mono",monospace; }
+    .action-footer { min-height:70px; padding:11px 20px 13px; border-top:1px solid var(--line); background:#fff; }
+    .action-footer button { min-height:43px; padding:0 18px; border-radius:9px; font-weight:900; }
+    .secondary { border:1px solid #7c96bb; background:#fff; color:#2b568e; }
+    .primary { min-width:220px; border:0; background:var(--blue); color:#fff; }
+    .primary:disabled { background:#a9bbd5; cursor:not-allowed; }
+    .footer-note { color:#6a7689; font-size:10px; }
+    @keyframes screen-in { from { opacity:0; transform:translateX(10px); } to { opacity:1; transform:none; } }
+    @keyframes evidence-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+  </style>
+</head>
+<body>
+  <main class="plugin-window" data-step="automatic">
+    <header class="topbar">
+      <div class="brand-row"><div class="brand">Figma → FairyGUI</div><div class="selection">当前选择：<strong>村庄升阶</strong> · 68 个图层</div></div>
+      <div class="step-rail" aria-label="转换流程">
+        <div class="step-dot active" data-step-dot="automatic">自动转换</div>
+        <div class="step-dot" data-step-dot="review">建议审核</div>
+        <div class="step-dot" data-step-dot="confirm">确认下载</div>
+      </div>
+    </header>
+
+    <section class="step-screen" data-screen="automatic">
+      <div class="step-scroll">
+        <div class="summary-head">
+          <div><div class="eyebrow">转换完成</div><h1>先看已经处理好的内容</h1><p class="lead">系统已经完成可确定的转换。这里展示转换方法和后续可编辑程度。</p></div>
+          <span class="count-pill">18 项已处理</span>
+        </div>
+        <div class="automatic-list">
+          <article class="automatic-item">
+            <div class="mini-pair" aria-label="背景渐变转换图示"><div class="mini-preview"><div class="phone"></div></div><div class="mini-preview generated"><div class="phone"></div></div></div>
+            <div class="auto-copy"><span class="method">原生转换</span><h3>背景渐变与投影</h3><p>渐变色、圆角和投影已写入 FairyGUI 原生属性，视觉与结构均可继续编辑。</p><div class="impact"><span>外观保留</span><span>可编辑</span></div></div>
+          </article>
+          <article class="automatic-item">
+            <div class="mini-pair" aria-label="复杂装饰保真图示"><div class="mini-preview"><div class="phone"></div></div><div class="mini-preview generated"><div class="phone"></div></div></div>
+            <div class="auto-copy"><span class="method raster">视觉保真图片</span><h3>复杂光效装饰</h3><p>无法稳定拆分的局部光效已合成为透明图片，整体外观保持一致。</p><div class="impact"><span>外观保留</span><span>局部不可编辑</span></div></div>
+          </article>
+          <article class="automatic-item">
+            <div class="mini-pair" aria-label="文本布局转换图示"><div class="mini-preview instance"><div class="phone"></div></div><div class="mini-preview generated instance"><div class="phone"></div></div></div>
+            <div class="auto-copy"><span class="method">原生转换</span><h3>文本与列表布局</h3><p>文本、间距和层级顺序已转换为 FairyGUI 对象，可在编辑器中继续调整。</p><div class="impact"><span>结构保留</span><span>可编辑</span></div></div>
+          </article>
+        </div>
+        <details class="quiet-details"><summary>工程详情</summary><div class="detail-body">components: 7 · images: 31 · package closure: pass<br>FairyGUI 6.1.4 · new project</div></details>
+      </div>
+    </section>
+
+    <section class="step-screen" data-screen="review" hidden>
+      <div class="step-scroll">
+        <div class="review-header">
+          <div class="eyebrow">建议审核</div><h1>逐项确认转换结果</h1><p class="lead">图中保留周围画面，并用橙色边框标出当前审核对象。</p>
+          <div class="item-nav"><span id="review-counter">1 / 2</span><div class="nav-actions"><button type="button" data-review-nav="previous">上一项</button><button type="button" data-review-nav="next">下一项</button></div></div>
+        </div>
+        <article class="review-record" data-review-record="0">
+          <div class="review-title"><div><h2>视觉样式保真</h2><p>复杂视觉保持外观，但局部样式不再独立编辑</p></div><span class="status-pill">建议确认</span></div>
+          <div class="comparison-grid">
+            <div><div class="preview-label">Figma 原图 <span>带上下文</span></div><div class="preview-canvas"><div class="context-frame"><div class="context-top"></div><div class="context-mid"></div><div class="context-bottom"></div><div class="context-node"></div></div></div></div>
+            <div><div class="preview-label">FairyGUI 结果 <span>转换预览</span></div><div class="preview-canvas generated-preview"><div class="context-frame"><div class="context-top"></div><div class="context-mid"></div><div class="context-bottom"></div><div class="context-node"></div></div></div></div>
+          </div>
+          <div class="review-explanation"><strong>为什么建议审核</strong><p>该区域包含叠加混合效果。系统使用透明图片保持最终视觉，不影响整体排布，但局部光效不能单独改色。</p></div>
+          <div class="choice-row"><button class="choice selected" type="button">保持当前保真方案</button><button class="choice" type="button">改为可编辑基础样式</button></div>
+        </article>
+        <article class="review-record" data-review-record="1" data-kind="instance" hidden>
+          <div class="review-title"><div><h2>实例边界确认</h2><p>嵌套实例已转换，需要确认组件拆分范围</p></div><span class="status-pill">建议确认</span></div>
+          <div class="comparison-grid">
+            <div><div class="preview-label">Figma 原图 <span>带上下文</span></div><div class="preview-canvas"><div class="context-frame"><div class="context-top"></div><div class="context-mid"></div><div class="context-bottom"></div><div class="context-node"></div></div></div></div>
+            <div><div class="preview-label">FairyGUI 结果 <span>转换预览</span></div><div class="preview-canvas generated-preview"><div class="context-frame"><div class="context-top"></div><div class="context-mid"></div><div class="context-bottom"></div><div class="context-node"></div></div></div></div>
+          </div>
+          <div class="review-explanation"><strong>为什么建议审核</strong><p>当前实例已拆为可复用组件。外观一致，但组件边界会影响后续换肤和复用方式。</p></div>
+          <div class="choice-row"><button class="choice selected" type="button">保留可复用组件</button><button class="choice" type="button">合并为当前页面对象</button></div>
+        </article>
+        <label class="ack-row"><input id="acknowledge" type="checkbox">我已查看图示和影响，并接受当前转换方案</label>
+        <section class="copy-card">
+          <div class="copy-head"><strong>需要在 Figma 中继续讨论？</strong><span id="copy-message">不会修改原画板</span></div>
+          <div class="figma-canvas-demo" data-copy-state="idle" aria-label="审核区复制动画">
+            <div class="canvas-frame source-frame" aria-label="当前选择画板"></div><div class="canvas-arrow">→</div><div class="canvas-frame review-frame" aria-label="FairyGUI 待审核"></div>
+          </div>
+          <button id="copy-to-figma" class="secondary" type="button" style="width:100%;margin-top:9px;min-height:38px">复制到 Figma 审核区</button>
+        </section>
+      </div>
+    </section>
+
+    <section class="step-screen" data-screen="confirm" hidden>
+      <div class="step-scroll">
+        <div class="eyebrow">确认下载</div><h1>工程已经可以交付</h1><p class="lead">审核结论和工程闭包都已完成。下载后可直接用 FairyGUI 6.1.4 打开。</p>
+        <section class="confirm-card">
+          <div class="summary-head"><h2>最终检查</h2><span class="count-pill">全部通过</span></div>
+          <div class="check-list"><div class="check-row"><span class="check-icon">✓</span>18 项自动转换完成</div><div class="check-row"><span class="check-icon">✓</span>2 项建议审核已确认</div><div class="check-row"><span class="check-icon">✓</span>0 项必须处理</div><div class="check-row"><span class="check-icon">✓</span>资源与 XML 闭包通过</div></div>
+          <div class="archive"><strong>village-upgrade.zip</strong><span>4.8 MB · SHA-256 已验证</span></div>
+        </section>
+        <button id="engineering-details" class="secondary" type="button" aria-expanded="false" style="width:100%;margin-top:12px;min-height:40px">工程详情</button>
+        <div id="engineering-panel" class="engineering-panel" hidden>components: 7<br>resources: 31<br>manifest: canonical<br>archive reopen: pass<br>FairyGUI target: 6.1.4</div>
+      </div>
+    </section>
+
+    <footer class="action-footer">
+      <div class="footer-note" id="footer-note">18 项已自动处理</div>
+      <button class="secondary" type="button" data-go-step="automatic" hidden>返回自动转换</button>
+      <button class="secondary" type="button" data-go-step="review" hidden>返回审核</button>
+      <button class="primary" type="button" data-go-step="review">查看建议审核</button>
+      <button class="primary" type="button" data-go-step="confirm" hidden disabled>确认审核结果</button>
+      <button id="download" class="primary" type="button" hidden disabled>确认并下载 ZIP</button>
+    </footer>
+  </main>
+  <script>
+    const state = { step:"automatic", reviewIndex:0, acknowledged:false, detailsOpen:false, copyState:"idle" };
+    const root = document.querySelector(".plugin-window");
+    const screens = [...document.querySelectorAll("[data-screen]")];
+    const records = [...document.querySelectorAll("[data-review-record]")];
+    const acknowledgement = document.querySelector("#acknowledge");
+    const copyDemo = document.querySelector(".figma-canvas-demo");
+    const copyMessage = document.querySelector("#copy-message");
+    const detailsButton = document.querySelector("#engineering-details");
+    const detailsPanel = document.querySelector("#engineering-panel");
+    let copyTimer;
+
+    function render() {
+      root.dataset.step = state.step;
+      screens.forEach((screen) => { screen.hidden = screen.dataset.screen !== state.step; });
+      const order = ["automatic","review","confirm"];
+      const current = order.indexOf(state.step);
+      document.querySelectorAll("[data-step-dot]").forEach((dot) => {
+        const position = order.indexOf(dot.dataset.stepDot);
+        dot.classList.toggle("active", position === current);
+        dot.classList.toggle("done", position < current);
+      });
+      records.forEach((record,index) => { record.hidden = index !== state.reviewIndex; });
+      document.querySelector("#review-counter").textContent = `${state.reviewIndex + 1} / ${records.length}`;
+      document.querySelector('[data-review-nav="previous"]').disabled = state.reviewIndex === 0;
+      document.querySelector('[data-review-nav="next"]').disabled = state.reviewIndex === records.length - 1;
+      acknowledgement.checked = state.acknowledged;
+      copyDemo.dataset.copyState = state.copyState;
+      copyMessage.textContent = state.copyState === "copied" ? "已放到当前画板右侧" : state.copyState === "copying" ? "正在创建独立审核区…" : "不会修改原画板";
+      detailsButton.setAttribute("aria-expanded", String(state.detailsOpen));
+      detailsPanel.hidden = !state.detailsOpen;
+      document.querySelectorAll(".action-footer [data-go-step], #download").forEach((button) => { button.hidden = true; });
+      const note = document.querySelector("#footer-note");
+      if (state.step === "automatic") {
+        note.textContent = "18 项已自动处理";
+        document.querySelector('.action-footer [data-go-step="review"].primary').hidden = false;
+      } else if (state.step === "review") {
+        note.textContent = state.acknowledged ? "审核项已确认" : "确认图示后可继续";
+        document.querySelector('.action-footer [data-go-step="automatic"]').hidden = false;
+        const confirm = document.querySelector('.action-footer [data-go-step="confirm"]');
+        confirm.hidden = false;
+        confirm.disabled = !state.acknowledged;
+      } else {
+        note.textContent = "FairyGUI 6.1.4 新建工程";
+        document.querySelector('.action-footer [data-go-step="review"].secondary').hidden = false;
+        const download = document.querySelector("#download");
+        download.hidden = false;
+        download.disabled = !state.acknowledged;
+      }
+    }
+
+    document.querySelectorAll("[data-go-step]").forEach((button) => button.addEventListener("click", () => { state.step = button.dataset.goStep; render(); }));
+    document.querySelectorAll("[data-review-nav]").forEach((button) => button.addEventListener("click", () => { state.reviewIndex += button.dataset.reviewNav === "next" ? 1 : -1; state.reviewIndex = Math.max(0,Math.min(records.length - 1,state.reviewIndex)); render(); }));
+    acknowledgement.addEventListener("change", () => { state.acknowledged = acknowledgement.checked; render(); });
+    document.querySelectorAll(".choice").forEach((button) => button.addEventListener("click", () => { const row = button.parentElement; row.querySelectorAll(".choice").forEach((choice) => choice.classList.toggle("selected",choice === button)); }));
+    document.querySelector("#copy-to-figma").addEventListener("click", () => { clearTimeout(copyTimer); state.copyState = "copying"; render(); copyTimer = window.setTimeout(() => { state.copyState = "copied"; render(); },240); });
+    detailsButton.addEventListener("click", () => { state.detailsOpen = !state.detailsOpen; render(); });
+    render();
+  </script>
+</body>
+</html>

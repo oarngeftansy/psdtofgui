@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HIFI 替换 · Figma 插件原型</title>
+  <style>
+    :root {
+      color: #172033;
+      background: #e8ebf0;
+      font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      font-synthesis: none;
+      --blue: #1f5fbf;
+      --blue-dark: #174a94;
+      --blue-soft: #edf4ff;
+      --border: #d8dee9;
+      --muted: #5b6472;
+      --surface: #ffffff;
+      --canvas: #f6f8fb;
+      --green: #367249;
+      --green-soft: #f0f8f2;
+      --amber: #8a5900;
+      --amber-soft: #fff8e8;
+      --red: #9b2c2c;
+      --red-soft: #fff3f3;
+    }
+
+    * { box-sizing: border-box; }
+    body { min-width: 320px; min-height: 100vh; margin: 0; padding: 12px; display: grid; place-items: center; background: radial-gradient(circle at 20% 0, #f5f6f8, #e2e6ec 70%); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(31,95,191,.28); outline-offset: 2px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 18px; letter-spacing: -.02em; }
+    h2 { font-size: 24px; letter-spacing: -.035em; }
+    h3 { font-size: 14px; }
+    .hidden { display: none !important; }
+
+    .plugin-shell {
+      width: min(640px, calc(100vw - 24px));
+      height: min(800px, calc(100vh - 24px));
+      min-height: 620px;
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      color: #171a21;
+      background: var(--canvas);
+      border: 1px solid #bdc6d3;
+      border-radius: 12px;
+      box-shadow: 0 24px 70px rgba(27,35,49,.22);
+    }
+
+    .writer-header { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px 10px; background: #fff; border-bottom: 1px solid var(--border); }
+    .writer-eyebrow { color: #6a7280; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .writer-header-selection { color: #5f6c80; font-size: 11px; text-align: right; }
+    .prototype-mark { display: inline-block; margin-top: 3px; padding: 2px 6px; border-radius: 99px; color: #4f5d72; background: #eef2f7; font-size: 9px; font-weight: 800; }
+
+    .product-tabs { display: grid; grid-template-columns: 1fr 1fr; padding: 0 20px; background: #fff; border-bottom: 1px solid var(--border); }
+    .product-tab { min-height: 42px; border: 0; border-bottom: 3px solid transparent; color: #6b7688; background: transparent; font-size: 12px; font-weight: 800; }
+    .product-tab.active { color: var(--blue-dark); border-color: var(--blue); }
+
+    .flow-rail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 20px 10px; background: #fff; border-bottom: 1px solid var(--border); }
+    .flow-step { position: relative; padding: 9px 2px 0; border: 0; border-top: 3px solid #d6deea; color: #7a8699; background: transparent; font-size: 11px; text-align: center; }
+    .flow-step::before { content: ""; position: absolute; top: -7px; left: 50%; width: 10px; height: 10px; transform: translateX(-50%); border: 2px solid #fff; border-radius: 50%; background: #c7d1df; }
+    .flow-step.current { color: #184f9d; border-color: var(--blue); font-weight: 900; }
+    .flow-step.current::before { background: var(--blue); }
+    .flow-step.done { color: var(--green); border-color: #6da780; }
+    .flow-step.done::before { background: #5f9c73; }
+
+    .step-scroll { min-height: 0; padding: 18px 20px 28px; overflow: auto; scrollbar-gutter: stable; }
+    .step-scroll::-webkit-scrollbar { width: 9px; }
+    .step-scroll::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 99px; background: #acb7c7; background-clip: padding-box; }
+    .page { display: none; animation: page-in .18s ease both; }
+    .page.active { display: block; }
+    .page > * + * { margin-top: 14px; }
+    .step-heading p { margin-top: 6px; color: #667287; font-size: 12px; line-height: 1.5; }
+
+    .card { padding: 12px; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+    .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .card-head p, .card-copy { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .compact-button, .secondary-button, .primary-button { min-height: 38px; padding: 7px 11px; border-radius: 8px; font-size: 12px; font-weight: 800; }
+    .compact-button, .secondary-button { color: #214c88; background: #fff; border: 1px solid #6f8fb8; }
+    .compact-button { min-height: 34px; white-space: nowrap; }
+    .primary-button { color: #fff; background: var(--blue); border: 1px solid var(--blue); }
+    .primary-button:hover:not(:disabled) { background: var(--blue-dark); }
+    button:disabled { cursor: not-allowed; opacity: .52; }
+    .pill { display: inline-flex; align-items: center; min-height: 23px; padding: 3px 8px; border-radius: 99px; color: #394458; background: #edf2f8; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .pill.good { color: #28583a; background: var(--green-soft); }
+    .pill.warn { color: #704800; background: var(--amber-soft); }
+    .pill.danger { color: var(--red); background: var(--red-soft); }
+
+    .selection-card { display: grid; grid-template-columns: 76px minmax(0,1fr) auto; align-items: center; gap: 11px; }
+    .blueprint { width: 76px; height: 48px; display: grid; grid-template-columns: 1fr 1.25fr .8fr; gap: 4px; padding: 5px; border: 1px solid #dfe4ec; border-radius: 7px; background: #f4f6f9; }
+    .blueprint i { display: block; border-radius: 3px; background: #dfe7f3; }
+    .blueprint i:nth-child(2) { background: #cbd9eb; }
+    .file-card { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: center; gap: 11px; margin-top: 10px; padding: 10px; border: 1px dashed #aab8ca; border-radius: 9px; background: #fafbfd; }
+    .file-icon { width: 38px; height: 42px; display: grid; place-items: center; border-radius: 8px; color: var(--blue-dark); background: var(--blue-soft); font-weight: 900; }
+
+    .target-tree { margin-top: 11px; border-top: 1px solid #e6eaf0; padding-top: 8px; }
+    .tree-row { width: 100%; min-height: 29px; display: flex; align-items: center; gap: 7px; padding: 4px 7px; border: 0; border-radius: 6px; color: #445066; background: transparent; font-size: 11px; text-align: left; }
+    button.tree-row:hover:not(:disabled) { background: #f0f4f9; }
+    button.tree-row:disabled { cursor: not-allowed; opacity: .58; }
+    .tree-row.indent-1 { padding-left: 22px; }
+    .tree-row.indent-2 { padding-left: 40px; }
+    .tree-row.indent-3 { padding-left: 58px; }
+    .tree-row.selected { color: var(--blue-dark); background: var(--blue-soft); font-weight: 800; }
+    .tree-row.target { box-shadow: inset 0 0 0 1px #92acd0; }
+    .tree-meta { margin-left: auto; color: #7a8699; font-size: 9px; }
+    .scope-grid { display: grid; grid-template-columns: 78px 1fr; gap: 7px 9px; margin-top: 10px; padding: 10px; border-radius: 8px; background: #f2f5f9; font-size: 10px; }
+    .scope-grid span { color: #6b7688; }
+    .scope-grid strong { overflow-wrap: anywhere; }
+
+    .mapping-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .mapping-head strong { font-size: 13px; }
+    .mapping-head p { margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .compare-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+    .preview-card { min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 11px; background: #fff; }
+    .preview-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; color: #56647a; font-size: 10px; }
+    .screen { position: relative; height: 255px; overflow: hidden; border: 1px solid #ced8e5; border-radius: 8px; background: linear-gradient(#dce5e1 0 18%, #86a99b 18%); }
+    .screen::before { content: ""; position: absolute; top: 21%; right: 9%; bottom: 18%; left: 9%; border: 6px solid #6f4932; background: #dfc18a; box-shadow: inset 0 0 0 3px #b27b49; }
+    .screen::after { content: ""; position: absolute; top: 7%; right: 10%; left: 10%; height: 8%; border: 3px solid #dbc184; background: #315a53; }
+    .screen.hifi { background: linear-gradient(#c8ded8 0 18%, #649283 18%); }
+    .screen.hifi::before { background: #efcb88; border-color: #69412c; }
+    .portrait { position: absolute; z-index: 2; top: 34%; left: 34%; width: 32%; height: 32%; border-radius: 44% 44% 30% 30%; background: #9b826e; }
+    .hifi .portrait { border-radius: 0; background: #735e82; clip-path: polygon(10% 0,35% 12%,50% 0,68% 13%,90% 0,76% 100%,24% 100%); }
+    .dots { position: absolute; z-index: 2; right: 26%; bottom: 24%; left: 26%; display: flex; justify-content: space-between; }
+    .dots i { width: 13px; height: 13px; border: 2px solid #eee; border-radius: 50%; background: #b25954; }
+    .dots i:nth-child(2) { background: #4f7c9b; }
+    .dots i:nth-child(3) { background: #65925f; }
+    .component-focus { position: absolute; z-index: 5; top: 31%; left: 30%; width: 40%; height: 39%; border: 3px solid #e36a22; border-radius: 4px; box-shadow: 0 0 0 999px rgba(34,46,56,.22); transition: .18s ease; pointer-events: none; }
+    .component-focus::before { content: attr(data-label); position: absolute; top: -22px; left: -3px; max-width: 150px; overflow: hidden; padding: 3px 5px; border-radius: 4px 4px 4px 0; color: #fff; background: #c65316; font-size: 8px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .component-focus::after { content: attr(data-index); position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px; display: grid; place-items: center; color: #8b410e; background: #fff; border: 2px solid #e36a22; border-radius: 50%; font-size: 8px; font-weight: 900; }
+    .mapping-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .mapping-nav > div { display: flex; gap: 7px; }
+    .mapping-detail { padding: 12px; border-left: 4px solid #cf8917; border-radius: 8px; background: #fff7e7; }
+    .mapping-detail p { margin-top: 4px; color: #68593d; font-size: 11px; line-height: 1.45; }
+    .mapping-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }
+    .summary-item { padding: 10px; border-left: 3px solid #99a8bc; background: #fff; }
+    .summary-item strong { display: block; font-size: 18px; }
+    .summary-item span { color: #6b7688; font-size: 9px; }
+    .summary-item.good { border-color: #5f9c73; }
+    .summary-item.warn { border-color: #cf8917; }
+    .summary-item.danger { border-color: #bd5f5f; }
+    .review-card { padding: 13px; border: 1px solid var(--border); border-radius: 13px; background: #fff; }
+    .review-card.is-risk { border-color: #d7a44e; }
+    .review-title { display: flex; justify-content: space-between; gap: 10px; }
+    .review-title p { margin-top: 4px; color: #6b7688; font-size: 11px; }
+    .asset-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 11px; }
+    .asset-box { height: 92px; display: grid; place-items: center; border: 1px solid #ced8e5; border-radius: 9px; background: #edf1f5; color: #6b7688; font-size: 10px; }
+    .asset-shape { width: 64%; height: 34%; border: 4px solid #6e482f; border-radius: 5px; background: #e1c58e; box-shadow: 0 3px 0 #6e482f; }
+    .asset-shape.new { background: #ef8a52; border-color: #573c32; }
+    .check-list { display: grid; gap: 8px; padding: 11px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+    .check-list label { display: flex; align-items: flex-start; gap: 8px; color: #333c49; font-size: 11px; font-weight: 700; }
+    .check-list input { width: 17px; height: 17px; margin: 0; accent-color: var(--blue); }
+    .notice { padding: 9px 11px; border-radius: 8px; color: #214c88; background: var(--blue-soft); font-size: 11px; line-height: 1.45; }
+
+    .writer-actions { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 11px 20px 13px; background: #fff; border-top: 1px solid var(--border); }
+    .writer-actions .primary-button { min-width: 205px; margin-left: auto; }
+    .new-project-page .card { display: grid; gap: 9px; }
+    .new-project-page label { display: grid; gap: 6px; color: #303745; font-size: 12px; font-weight: 800; }
+    .new-project-page input { min-height: 40px; padding: 8px 10px; border: 1px solid #7c8798; border-radius: 8px; }
+
+    @keyframes page-in { from { opacity: 0; transform: translateX(7px); } to { opacity: 1; transform: none; } }
+    @media (max-width: 520px) {
+      body { padding: 0; }
+      .plugin-shell { width: 100vw; height: 100vh; min-height: 600px; border: 0; border-radius: 0; }
+      .selection-card, .file-card { grid-template-columns: 58px minmax(0,1fr); }
+      .selection-card button, .file-card button { grid-column: 1 / -1; }
+      .blueprint { width: 58px; }
+      .screen { height: 218px; }
+      .writer-actions .primary-button { min-width: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="plugin-shell" aria-label="Figma 转 FairyGUI 插件原型">
+    <header class="writer-header">
+      <div><p class="writer-eyebrow">Figma → FairyGUI</p><h1 id="pageTitle">HIFI 替换</h1></div>
+      <div class="writer-header-selection"><span id="selectionMeta">42 个图层 · 15 个资源</span><br><span class="prototype-mark">交互原型 · 非真实数据</span></div>
+    </header>
+
+    <nav class="product-tabs" aria-label="功能">
+      <button class="product-tab" data-product="new">新建工程</button>
+      <button class="product-tab active" data-product="hifi">HIFI 替换</button>
+    </nav>
+
+    <nav class="flow-rail" id="hifiRail" aria-label="HIFI 替换流程">
+      <button class="flow-step current" data-stage="prepare">准备材料</button>
+      <button class="flow-step" data-stage="align">组件对齐</button>
+      <button class="flow-step" data-stage="review">审核交付</button>
+    </nav>
+    <div class="flow-rail hidden" id="newRail" aria-label="新建工程流程">
+      <span class="flow-step current">工程设置</span><span class="flow-step">建议审核</span><span class="flow-step">确认下载</span>
+    </div>
+
+    <div class="step-scroll">
+      <section class="page new-project-page" data-page="new">
+        <div class="step-heading"><p class="writer-eyebrow">现有功能</p><h2>新建工程</h2><p>当前页面保留原有 Writer 流程，不因新增 HIFI 替换而改变。</p></div>
+        <section class="card selection-card">
+          <div class="blueprint" aria-label="结构蓝图"><i></i><i></i><i></i></div>
+          <div><h3>速记板 / HIFI v4</h3><p class="card-copy">42 个图层 · 15 个资源<br>结构蓝图已准备</p></div>
+          <button class="compact-button" type="button">刷新选择</button>
+        </section>
+        <section class="card">
+          <label>工程名称<input value="SketchboardUI" aria-label="工程名称" /></label>
+          <div><span class="pill">FairyGUI 6.1.4</span> <span class="pill">新建独立工程</span> <span class="pill">Unity</span></div>
+        </section>
+        <p class="notice">复用现有功能：读取 Figma 选择、生成候选、逐项建议审核、定位图层、复制审核区和确认下载。</p>
+      </section>
+
+      <section class="page active" data-page="prepare">
+        <div class="step-heading"><p class="writer-eyebrow">准备材料</p><h2>确定替换范围</h2><p>使用当前 Figma 选择作为 HIFI，并明确旧工程中允许修改的位置。</p></div>
+
+        <section class="card selection-card">
+          <div class="blueprint" aria-label="HIFI 结构蓝图"><i></i><i></i><i></i></div>
+          <div><h3>当前 Figma 选择</h3><strong>速记板 / HIFI v4</strong><p class="card-copy">Frame · 1080×1920 · 42 个图层</p></div>
+          <button class="compact-button" type="button" id="refreshSelection">刷新选择</button>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h3>旧 FairyGUI 工程</h3><p>复用现有“更新工程”的 ZIP 上传与安全副本能力。</p></div><span class="pill good">解析完成</span></div>
+          <div class="file-card"><div class="file-icon">ZIP</div><div><strong>isekaiUI_0913.zip</strong><p class="card-copy">186 MB · FairyGUI 6.1.4 · 24 个包</p></div><button class="compact-button" type="button">更换工程</button></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h3>FGUI 修改位置</h3><p>依次选择 Package、目标目录和根组件。</p></div><span class="pill good" id="targetStatus">已确认</span></div>
+          <div class="target-tree">
+            <div class="tree-row">⌄ assets <span class="tree-meta">24 个包</span></div>
+            <button class="tree-row indent-1" type="button" disabled>› Base <span class="tree-meta">锁定</span></button>
+            <button class="tree-row indent-1 selected" type="button" data-select-kind="package" data-value="MyVillage" aria-pressed="true">⌄ MyVillage <span class="tree-meta">Package</span></button>
+            <button class="tree-row indent-2 selected target" type="button" data-select-kind="directory" data-value="Panel" aria-pressed="true">⌄ Panel <span class="tree-meta">目标目录</span></button>
+            <button class="tree-row indent-3" type="button" data-select-kind="component" data-parent-dir="Panel" data-value="Panel_MyVillage_Main" aria-pressed="false">◆ Panel_MyVillage_Main</button>
+            <button class="tree-row indent-3 selected" type="button" data-select-kind="component" data-parent-dir="Panel" data-value="Panel_MyVillage_Sketchboard" aria-pressed="true">◆ Panel_MyVillage_Sketchboard <span class="tree-meta">根组件</span></button>
+            <button class="tree-row indent-2" type="button" data-select-kind="directory" data-value="Component" aria-pressed="false">› Component <span class="tree-meta">17 个组件</span></button>
+            <button class="tree-row indent-3 hidden" type="button" data-select-kind="component" data-parent-dir="Component" data-value="Btn_Common" aria-pressed="false">◆ Btn_Common</button>
+            <button class="tree-row indent-3 hidden" type="button" data-select-kind="component" data-parent-dir="Component" data-value="ProgressBubble" aria-pressed="false">◆ ProgressBubble</button>
+          </div>
+          <div class="scope-grid"><span>目标目录</span><strong id="targetDirectory">MyVillage / Panel</strong><span>根组件</span><strong id="targetComponent">Panel_MyVillage_Sketchboard</strong></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="align">
+        <div class="step-heading"><p class="writer-eyebrow">组件对齐</p><h2>逐项确认对应关系</h2><p>沿用现有逐项审核方式。当前组件会在旧 FGUI 与 HIFI 两侧同时高亮。</p></div>
+        <div class="mapping-head"><div><strong id="mappingTitle">人物剪影</strong><p id="mappingPair">FGUI · silhouette_01 ↔ HIFI · Portrait_Main</p></div><span class="pill good" id="mappingScore">94% 可信</span></div>
+        <div class="compare-grid">
+          <article class="preview-card"><div class="preview-label"><strong>旧 FGUI</strong><span id="oldNodeLabel">silhouette_01</span></div><div class="screen"><div class="portrait"></div><div class="dots"><i></i><i></i><i></i></div><div class="component-focus" id="oldFocus" data-label="FGUI · silhouette_01" data-index="12"></div></div></article>
+          <article class="preview-card"><div class="preview-label"><strong>Figma HIFI</strong><span id="newNodeLabel">Portrait_Main</span></div><div class="screen hifi"><div class="portrait"></div><div class="dots"><i></i><i></i><i></i></div><div class="component-focus" id="newFocus" data-label="HIFI · Portrait_Main" data-index="12"></div></div></article>
+        </div>
+        <div class="mapping-nav"><strong id="mappingCounter">12 / 31</strong><div><button class="compact-button" id="prevMapping" type="button">上一项</button><button class="compact-button" id="nextMapping" type="button">下一项</button></div></div>
+        <section class="mapping-detail"><strong>判断依据</strong><p id="mappingReason">位置、父级、轮廓和相对尺寸接近。该匹配只替换视觉资源，不改变旧对象 ID。</p><div class="mapping-actions"><button class="compact-button" type="button" id="locateFigma">定位到 Figma 图层</button><button class="compact-button" type="button">重新指定 HIFI 图层</button><button class="compact-button" type="button">保留旧组件</button></div></section>
+        <div class="summary-grid"><div class="summary-item good"><strong>31</strong><span>已匹配</span></div><div class="summary-item"><strong>4</strong><span>HIFI 新增</span></div><div class="summary-item danger"><strong>2</strong><span>HIFI 缺失</span></div><div class="summary-item warn"><strong>3</strong><span>待确认</span></div></div>
+      </section>
+
+      <section class="page" data-page="review">
+        <div class="step-heading"><p class="writer-eyebrow">审核交付</p><h2>检查候选差异</h2><p>复用现有候选审核与确认下载能力。先下载候选到 FairyGUI Editor 检查，通过后再交付。</p></div>
+        <div class="summary-grid"><div class="summary-item good"><strong>18</strong><span>资源替换</span></div><div class="summary-item"><strong>4</strong><span>新增资源</span></div><div class="summary-item good"><strong>0</strong><span>公共包改动</span></div><div class="summary-item warn"><strong>2</strong><span>保留例外</span></div></div>
+        <article class="review-card is-risk">
+          <div class="review-title"><div><h3>Btn_Next / background</h3><p>图片资源替换 · 旧对象身份保持</p></div><span class="pill warn">建议确认</span></div>
+          <div class="asset-compare"><div><p class="card-copy">旧 FGUI</p><div class="asset-box"><div class="asset-shape"></div></div></div><div><p class="card-copy">候选结果</p><div class="asset-box"><div class="asset-shape new"></div></div></div></div>
+          <div class="mapping-detail"><strong>实际影响</strong><p>保持 image 对象 ID、名称、位置、尺寸和按钮状态，只把资源引用改为目标目录下的新私有图片。</p></div>
+          <div class="mapping-actions"><button class="compact-button" type="button">上一项</button><button class="compact-button" type="button">下一项</button><button class="compact-button" type="button">复制到 Figma 审核区</button></div>
+        </article>
+        <button class="secondary-button" id="downloadCandidate" type="button">下载 FairyGUI 审核候选</button>
+        <section class="check-list" aria-label="Editor 检查">
+          <strong>FairyGUI Editor 人工检查</strong>
+          <label><input class="delivery-check" type="checkbox" />候选工程可以正常打开并保存</label>
+          <label><input class="delivery-check" type="checkbox" />普通、选中、禁用状态与文字排版正确</label>
+          <label><input class="delivery-check" type="checkbox" />确认接受报告中的 2 个保留例外</label>
+        </section>
+      </section>
+    </div>
+
+    <footer class="writer-actions">
+      <button class="secondary-button hidden" id="backButton" type="button">返回上一步</button>
+      <button class="primary-button" id="primaryButton" type="button">开始盘点与映射</button>
+    </footer>
+  </main>
+
+  <script>
+    const productButtons = [...document.querySelectorAll('[data-product]')];
+    const stageButtons = [...document.querySelectorAll('[data-stage]')];
+    const pages = [...document.querySelectorAll('[data-page]')];
+    const pageTitle = document.getElementById('pageTitle');
+    const selectionMeta = document.getElementById('selectionMeta');
+    const hifiRail = document.getElementById('hifiRail');
+    const newRail = document.getElementById('newRail');
+    const primaryButton = document.getElementById('primaryButton');
+    const backButton = document.getElementById('backButton');
+    const stages = ['prepare', 'align', 'review'];
+    const legacyStage = { guided: 'prepare', workbench: 'align', review: 'review' };
+    const params = new URLSearchParams(location.search);
+    let product = params.get('product') === 'new' ? 'new' : 'hifi';
+    let stage = stages.includes(params.get('stage')) ? params.get('stage') : legacyStage[params.get('v')] || 'prepare';
+
+    function render(push = false) {
+      productButtons.forEach((button) => button.classList.toggle('active', button.dataset.product === product));
+      hifiRail.classList.toggle('hidden', product !== 'hifi');
+      newRail.classList.toggle('hidden', product !== 'new');
+      pages.forEach((page) => page.classList.toggle('active', page.dataset.page === (product === 'new' ? 'new' : stage)));
+      pageTitle.textContent = product === 'new' ? '新建工程' : 'HIFI 替换';
+      selectionMeta.textContent = product === 'new' ? '42 个图层 · 15 个资源' : '速记板 / HIFI v4';
+      if (product === 'new') {
+        primaryButton.textContent = '生成候选工程';
+        primaryButton.disabled = false;
+        backButton.classList.add('hidden');
+      } else {
+        const index = stages.indexOf(stage);
+        stageButtons.forEach((button, buttonIndex) => {
+          button.classList.toggle('current', button.dataset.stage === stage);
+          button.classList.toggle('done', buttonIndex < index);
+        });
+        backButton.classList.toggle('hidden', index === 0);
+        backButton.textContent = stage === 'review' ? '返回组件对齐' : '返回准备材料';
+        primaryButton.textContent = stage === 'prepare' ? '开始盘点与映射' : stage === 'align' ? '确认映射，生成审核候选' : '批准并下载交付包';
+        updateDeliveryState();
+        if (stage === 'prepare') renderTargetSelection();
+      }
+      if (push) history.pushState({}, '', product === 'new' ? '?product=new' : `?stage=${stage}`);
+    }
+
+    productButtons.forEach((button) => button.addEventListener('click', () => { product = button.dataset.product; render(true); }));
+    stageButtons.forEach((button) => button.addEventListener('click', () => { product = 'hifi'; stage = button.dataset.stage; render(true); }));
+    window.addEventListener('popstate', () => {
+      const next = new URLSearchParams(location.search);
+      product = next.get('product') === 'new' ? 'new' : 'hifi';
+      stage = stages.includes(next.get('stage')) ? next.get('stage') : 'prepare';
+      render();
+    });
+
+    primaryButton.addEventListener('click', () => {
+      if (product === 'new') return;
+      const index = stages.indexOf(stage);
+      if (index < stages.length - 1) { stage = stages[index + 1]; render(true); }
+    });
+    backButton.addEventListener('click', () => {
+      const index = stages.indexOf(stage);
+      if (index > 0) { stage = stages[index - 1]; render(true); }
+    });
+
+    const mappingItems = [
+      { index: 3, title: '顶部标题', old: 'title_bar', next: 'Header_Title', score: '97%', box: ['7%', '5%', '86%', '12%'], reason: '位置、文本内容与父级一致。保留旧文本对象，只同步 HIFI 的视觉样式。' },
+      { index: 8, title: '木板背景', old: 'board_bg', next: 'Board_Background', score: '96%', box: ['8%', '20%', '84%', '64%'], reason: '位置、尺寸和九宫用途一致。保留旧对象几何与九宫配置，只替换私有资源。' },
+      { index: 12, title: '人物剪影', old: 'silhouette_01', next: 'Portrait_Main', score: '94%', box: ['30%', '31%', '40%', '39%'], reason: '位置、父级、轮廓和相对尺寸接近。该匹配只替换视觉资源，不改变旧对象 ID。' },
+      { index: 19, title: '颜色选项', old: 'color_group', next: 'Color_Options', score: '91%', box: ['21%', '69%', '58%', '12%'], reason: '子项数量和水平顺序一致。HIFI 多一个装饰描边，作为当前组件内的新私有视觉节点处理。' },
+      { index: 27, title: '下一步按钮', old: 'btn_next', next: 'Btn_Next', score: '95%', box: ['50%', '84%', '39%', '11%'], reason: '位置、按钮类型与文字一致。保留旧按钮控制器和状态，只替换各状态背景资源。' },
+    ];
+    let mappingIndex = 2;
+    function renderMapping() {
+      const item = mappingItems[mappingIndex];
+      document.getElementById('mappingTitle').textContent = item.title;
+      document.getElementById('mappingPair').textContent = `FGUI · ${item.old} ↔ HIFI · ${item.next}`;
+      document.getElementById('mappingScore').textContent = `${item.score} 可信`;
+      document.getElementById('mappingCounter').textContent = `${item.index} / 31`;
+      document.getElementById('oldNodeLabel').textContent = item.old;
+      document.getElementById('newNodeLabel').textContent = item.next;
+      document.getElementById('mappingReason').textContent = item.reason;
+      const oldFocus = document.getElementById('oldFocus');
+      const newFocus = document.getElementById('newFocus');
+      [oldFocus, newFocus].forEach((focus) => {
+        [focus.style.top, focus.style.left, focus.style.width, focus.style.height] = [item.box[1], item.box[0], item.box[2], item.box[3]];
+        focus.dataset.index = item.index;
+      });
+      oldFocus.dataset.label = `FGUI · ${item.old}`;
+      newFocus.dataset.label = `HIFI · ${item.next}`;
+      document.getElementById('prevMapping').disabled = mappingIndex === 0;
+      document.getElementById('nextMapping').disabled = mappingIndex === mappingItems.length - 1;
+    }
+    document.getElementById('prevMapping').addEventListener('click', () => { mappingIndex = Math.max(0, mappingIndex - 1); renderMapping(); });
+    document.getElementById('nextMapping').addEventListener('click', () => { mappingIndex = Math.min(mappingItems.length - 1, mappingIndex + 1); renderMapping(); });
+
+    const deliveryChecks = [...document.querySelectorAll('.delivery-check')];
+    function updateDeliveryState() {
+      primaryButton.disabled = product === 'hifi' && stage === 'review' && !deliveryChecks.every((check) => check.checked);
+    }
+    deliveryChecks.forEach((check) => check.addEventListener('change', updateDeliveryState));
+    document.getElementById('refreshSelection').addEventListener('click', (event) => { event.currentTarget.textContent = '选择已刷新'; });
+    document.getElementById('locateFigma').addEventListener('click', (event) => { event.currentTarget.textContent = '已定位'; });
+    document.getElementById('downloadCandidate').addEventListener('click', (event) => { event.currentTarget.textContent = '审核候选已准备'; });
+
+    const targetState = { package: 'MyVillage', directory: 'Panel', component: 'Panel_MyVillage_Sketchboard' };
+    const targetRows = [...document.querySelectorAll('[data-select-kind]')];
+    function renderTargetSelection() {
+      targetRows.forEach((row) => {
+        const kind = row.dataset.selectKind;
+        const selected = targetState[kind] === row.dataset.value;
+        row.classList.toggle('selected', selected);
+        if (kind === 'directory') row.classList.toggle('target', selected);
+        row.setAttribute('aria-pressed', String(selected));
+        if (kind === 'component') row.classList.toggle('hidden', row.dataset.parentDir !== targetState.directory);
+      });
+      document.getElementById('targetDirectory').textContent = `${targetState.package} / ${targetState.directory}`;
+      document.getElementById('targetComponent').textContent = targetState.component || '请选择根组件';
+      const complete = Boolean(targetState.package && targetState.directory && targetState.component);
+      const status = document.getElementById('targetStatus');
+      status.textContent = complete ? '已确认' : '请选择根组件';
+      status.classList.toggle('good', complete);
+      status.classList.toggle('warn', !complete);
+      if (product === 'hifi' && stage === 'prepare') primaryButton.disabled = !complete;
+    }
+    targetRows.forEach((row) => row.addEventListener('click', () => {
+      const kind = row.dataset.selectKind;
+      if (kind === 'package') targetState.package = row.dataset.value;
+      if (kind === 'directory') {
+        targetState.directory = row.dataset.value;
+        targetState.component = '';
+      }
+      if (kind === 'component' && row.dataset.parentDir === targetState.directory) targetState.component = row.dataset.value;
+      renderTargetSelection();
+    }));
+
+    renderMapping();
+    render();
+    renderTargetSelection();
+  </script>
+</body>
+</html>

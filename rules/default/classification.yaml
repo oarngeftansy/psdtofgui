@@ -1,0 +1,26 @@
+rules:
+  - id: node.text
+    version: 1
+    priority: 1000
+    when:
+      type: TEXT
+    action:
+      outputType: TEXT
+    confidence: 1.0
+  - id: node.top-level-panel
+    version: 1
+    priority: 900
+    when:
+      type: FRAME
+      minWidth: 540
+      minChildren: 1
+    action:
+      outputType: PANEL
+    confidence: 0.95
+  - id: node.inline-fallback
+    version: 1
+    priority: 0
+    when: {}
+    action:
+      outputType: INLINE
+    confidence: 0.5

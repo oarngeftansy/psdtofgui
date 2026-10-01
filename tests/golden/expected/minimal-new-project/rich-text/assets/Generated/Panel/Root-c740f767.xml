@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<component size="320,180" opaque="false">
+  <displayList>
+    <richtext id="9f2d99f3" name="9f2d99f3" xy="8,0" size="20,30" rotation="13" alpha="0.5" visible="false" fontSize="14.5" color="#112233" align="center" vAlign="middle" autoSize="none" ubb="true" text="Hello &amp; [color=#445566]&lt;world&gt;&#10;[/color]"/>
+  </displayList>
+</component>

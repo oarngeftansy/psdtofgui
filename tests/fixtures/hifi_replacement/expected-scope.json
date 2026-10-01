@@ -1,0 +1,7 @@
+{
+  "target": "assets/MyVillage/Panel/Panel_MyVillage_Sketchboard.xml",
+  "preserve_old_ids": ["btn_reset"],
+  "add_figma_ids": ["progress-bubble"],
+  "shared_component_ids": ["sharedbtn1"],
+  "forbidden_operations": ["delete", "rename_component", "edit_shared_definition"]
+}

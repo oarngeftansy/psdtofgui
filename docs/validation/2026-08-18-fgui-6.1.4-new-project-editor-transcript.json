@@ -1,0 +1,43 @@
+{
+  "artifact": {
+    "byteSize": 1426,
+    "sha256": "bf62cd2789a7d0a44336e28a4c257d4fe91bee34c7673738bdf3f0662217c4ca"
+  },
+  "editorVersion": "6.1.4",
+  "files": [
+    {
+      "match": true,
+      "path": "GenericWriterFixture.fairy",
+      "sha256": "bb74d97ef5039e471184ef3efeb3932e8e4843d5e856e56c88c2aec181ac92d8"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/package.xml",
+      "sha256": "0a90a6b2c18f6443344ec5462511bc12c27c748c079bcbc078dbf841c2d334d4"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/components/root-6e07d820.xml",
+      "sha256": "6a804a0c74f0f6ccd8fb1c8b60b0296b05cf62f1b7bbdb3236f4a3a781f08a6a"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/resources/generic-pixel-7fb786de.png",
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    }
+  ],
+  "gate": {
+    "modalObserved": false,
+    "rounds": ["open-save-close", "reopen-save-close"],
+    "windowsAfterGate": 0
+  },
+  "projectName": "GenericWriterFixture",
+  "provenance": {
+    "evidenceKind": "window-title-and-byte-hash",
+    "fileHashSource": "deterministic-archive-members-equal-post-editor-extracted-files",
+    "representativeOnly": true,
+    "screenshotAvailable": false,
+    "windowStateApiSupported": false
+  },
+  "schemaVersion": 1
+}

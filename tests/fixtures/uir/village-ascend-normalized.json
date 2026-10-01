@@ -1,0 +1,56 @@
+{
+  "id": "village-root",
+  "name": "村庄升阶",
+  "type": "FRAME",
+  "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1080, "height": 1923},
+  "children": [
+    {
+      "id": "title",
+      "name": "Village Ascend",
+      "type": "TEXT",
+      "absoluteBoundingBox": {"x": 109, "y": 33, "width": 239, "height": 40},
+      "characters": "Village Ascend",
+      "style": {"fontSize": 36, "textAlignHorizontal": "LEFT"}
+    },
+    {
+      "id": "rank-before",
+      "name": "txt_rank_before",
+      "type": "TEXT",
+      "absoluteBoundingBox": {"x": 35, "y": 134, "width": 408, "height": 40},
+      "characters": "Decrepit Village·1",
+      "style": {"fontSize": 52, "textAlignHorizontal": "CENTER"}
+    },
+    {
+      "id": "primary-button",
+      "name": "通用一级按钮",
+      "type": "INSTANCE",
+      "absoluteBoundingBox": {"x": 278, "y": 1766, "width": 776, "height": 132},
+      "componentProperties": {
+        "type": {"value": "正常"},
+        "Size": {"value": "L"}
+      }
+    },
+    {
+      "id": "background",
+      "name": "village_background",
+      "type": "GROUP",
+      "absoluteBoundingBox": {"x": 0, "y": 300, "width": 1080, "height": 1383},
+      "componentProperties": {
+        "export_strategy": {"value": "composite_png"},
+        "raster_reasons": {"value": ["visual_effect"]}
+      },
+      "style": {
+        "resourceRefs": [
+          {
+            "asset": "village-background",
+            "mimeType": "image/png",
+            "sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+            "width": 1080,
+            "height": 1383,
+            "exportFormat": "png"
+          }
+        ]
+      }
+    }
+  ]
+}

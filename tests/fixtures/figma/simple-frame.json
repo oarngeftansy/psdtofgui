@@ -1,0 +1,16 @@
+{
+  "id": "1:1",
+  "name": "Main",
+  "type": "FRAME",
+  "absoluteBoundingBox": {"x": 0.0, "y": 0.0, "width": 1080.0, "height": 1920.0},
+  "children": [
+    {
+      "id": "1:2",
+      "name": "Title",
+      "type": "TEXT",
+      "absoluteBoundingBox": {"x": 100.2, "y": 50.7, "width": 300.0, "height": 40.0},
+      "characters": "Hello",
+      "style": {"fontSize": 32, "textAlignHorizontal": "CENTER"}
+    }
+  ]
+}

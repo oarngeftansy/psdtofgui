@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="sample01" name="Sample">
+  <resources>
+    <image id="img00001" name="Bg_Main.png" path="/Img/" exported="true"/>
+    <component id="cmp00001" name="Existing.xml" path="/Panel/" exported="true"/>
+  </resources>
+</packageDescription>

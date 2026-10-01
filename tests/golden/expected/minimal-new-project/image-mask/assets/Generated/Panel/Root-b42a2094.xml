@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<component size="320,180" opaque="false" mask="c7fc32d4">
+  <displayList>
+    <image id="c7fc32d4" name="c7fc32d4" xy="0,0" size="100,80" src="23ac6263" fileName="Img/asset-image-mask-23ac6263.png"/>
+    <text id="3e76ef2b" name="3e76ef2b" xy="4,5" size="20,12" fontSize="12.5" color="#112233" align="center" vAlign="middle" autoSize="none" strokeColor="#445566" strokeSize="1.25" text="A &amp; &lt;B&gt; &quot;quoted&quot;&#10;"/>
+  </displayList>
+</component>

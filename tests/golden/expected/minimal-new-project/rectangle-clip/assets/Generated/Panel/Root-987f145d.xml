@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<component size="320,180" opaque="false" overflow="hidden">
+  <displayList>
+    <text id="e13438c4" name="e13438c4" xy="4,5" size="20,12" fontSize="12.5" color="#112233" align="center" vAlign="middle" autoSize="none" strokeColor="#445566" strokeSize="1.25" text="A &amp; &lt;B&gt; &quot;quoted&quot;&#10;"/>
+  </displayList>
+</component>

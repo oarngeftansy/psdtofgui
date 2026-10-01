@@ -1,0 +1,13 @@
+policies:
+  - id: xml.parseable
+    version: 1
+    severity: ERROR
+  - id: path.project-relative
+    version: 1
+    severity: ERROR
+  - id: resource-id.eight-chars
+    version: 1
+    severity: ERROR
+  - id: text.fixed-size
+    version: 1
+    severity: ERROR

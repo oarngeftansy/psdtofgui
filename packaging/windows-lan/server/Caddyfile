@@ -1,0 +1,16 @@
+{
+    auto_https off
+    admin off
+}
+
+:8780 {
+    handle_path /client/releases/* {
+        root * C:\ProgramData\FigmaToFGUI\release
+        file_server
+    }
+    handle {
+        reverse_proxy 127.0.0.1:8765 {
+            header_up X-Figma-Gateway-Token {$FGUI_GATEWAY_SECRET}
+        }
+    }
+}

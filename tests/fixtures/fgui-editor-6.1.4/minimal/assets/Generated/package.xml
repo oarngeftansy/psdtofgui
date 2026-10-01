@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<packageDescription id="mrz8gz9s">
+  <resources>
+    <component id="frrzw" name="Root.xml" path="/Panel/"/>
+  </resources>
+  <publish name="" path="../Assets/Art/ui/generated" packageCount="2"/>
+</packageDescription>

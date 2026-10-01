@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "display_name": "速记板 / HIFI v4",
+  "top_level_nodes": [
+    {
+      "id": "hifi-root",
+      "name": "Panel_MyVillage_Sketchboard",
+      "type": "FRAME",
+      "bounds": {"x": 0, "y": 0, "width": 750, "height": 420},
+      "children": [
+        {"id": "hifi-board", "name": "BoardBg", "type": "RECTANGLE", "bounds": {"x": 0, "y": 0, "width": 750, "height": 420}, "resource_keys": ["hifi-board"]},
+        {"id": "hifi-title", "name": "TitleBar", "type": "TEXT", "bounds": {"x": 48, "y": 30, "width": 356, "height": 46}, "text": "Village Notes"},
+        {"id": "hifi-silhouette", "name": "CharacterSilhouette", "type": "RECTANGLE", "bounds": {"x": 54, "y": 101, "width": 210, "height": 246}},
+        {"id": "hifi-next", "name": "Btn_Next", "type": "INSTANCE", "bounds": {"x": 568, "y": 337, "width": 120, "height": 44}},
+        {"id": "progress-bubble", "name": "ProgressBubble", "type": "ELLIPSE", "bounds": {"x": 334, "y": 94, "width": 46, "height": 46}},
+        {"id": "ambiguous-a", "name": "Badge", "type": "ELLIPSE", "bounds": {"x": 422, "y": 95, "width": 44, "height": 44}},
+        {"id": "ambiguous-b", "name": "Badge", "type": "ELLIPSE", "bounds": {"x": 472, "y": 95, "width": 44, "height": 44}}
+      ]
+    }
+  ],
+  "resources": [
+    {"key": "hifi-board", "mime_type": "image/png", "size": 70}
+  ],
+  "warnings": []
+}

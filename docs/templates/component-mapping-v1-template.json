@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "mappingVersion": "YYYY.MM.DD",
+  "name": "请填写映射表名称",
+  "components": [
+    {
+      "key": "请填写全局唯一英文key",
+      "figma": {
+        "names": [
+          "请填写Figma组件名称"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "请填写通用角色，例如button",
+        "semanticName": "请填写语义名，例如primaryAction",
+        "componentType": "请填写组件类型，例如button"
+      },
+      "fairygui": {
+        "package": "请填写FairyGUI包名",
+        "component": "请填写FairyGUI组件名",
+        "path": "请填写包内XML相对路径"
+      },
+      "properties": {
+        "请填写Figma Variant属性名": {
+          "required": false,
+          "default": "请填写默认值",
+          "valueMap": {
+            "请填写Figma属性值": {
+              "controller": "请填写FairyGUI Controller名称",
+              "page": "请填写Controller页面名称或索引"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "请填写负责人或团队",
+        "document": "请填写规范文档名称或链接",
+        "note": "可选备注"
+      },
+      "status": "candidate"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "automatedStatus": "PASS",
+  "editorStatus": "NOT_RUN",
+  "editorReason": "FairyGUI 6.1.4 executable was not available to this automated runner.",
+  "mappingCounts": {
+    "fgui_only": 2,
+    "hifi_added": 3,
+    "matched": 4,
+    "uncertain": 1
+  },
+  "decisionCounts": {
+    "accept": 4,
+    "add_visual": 1,
+    "exception": 2,
+    "keep_old": 2,
+    "retarget": 1
+  },
+  "objectDiffCounts": {
+    "added": 1,
+    "changed": 5,
+    "exception": 2,
+    "kept": 2
+  },
+  "candidateSha256": "9e8f84de40016fb01fd3ca581112dc59e95e97f351e599443a620e2b76beeddb",
+  "deliveredSha256": "9e8f84de40016fb01fd3ca581112dc59e95e97f351e599443a620e2b76beeddb",
+  "reviewSha256": "9e8f84de40016fb01fd3ca581112dc59e95e97f351e599443a620e2b76beeddb",
+  "candidateEqualsDelivered": true,
+  "protectedIdentityUnchanged": true,
+  "sharedReferenceUnchanged": true,
+  "lowfiReferenceReplaced": true,
+  "hifiResourceRegistered": true,
+  "hifiResourceBytesMatch": true,
+  "scopeValid": true,
+  "archiveContainsTarget": true,
+  "changedPaths": [
+    "assets/MyVillage/Img/HIFI/Panel_MyVillage_Sketchboard/BoardBg-eae8d699.png",
+    "assets/MyVillage/Panel/Panel_MyVillage_Sketchboard.xml",
+    "assets/MyVillage/package.xml"
+  ],
+  "warnings": [
+    "目标组件含未知标签或属性；候选保留其原始字节结构，仍需 Editor 检查。"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "executedAt": "2026-08-21T10:13:09.6828580+08:00",
+  "result": "BLOCKED_BY_LOCAL_GUI_CAPABILITY",
+  "freshGuiAcceptanceComplete": false,
+  "figma": {
+    "installed": true,
+    "launched": true,
+    "applicationVersionPathSegment": "app-126.7.10",
+    "returnedWindowCount": 1,
+    "returnedWindowTitle": "figma2fgui - Figma",
+    "accessibilityTreeAvailable": true,
+    "nativeScreenshot": {
+      "supported": false,
+      "errorCode": "0x80004002",
+      "message": "SetIsBorderRequired failed: unsupported interface"
+    },
+    "elementInput": {
+      "supported": false,
+      "error": "coordinate input geometry is unavailable"
+    },
+    "neutralSelectionProven": false,
+    "developmentPluginRunObserved": false,
+    "pluginStatesCaptured": [],
+    "selectionUploadedByGui": false,
+    "downloadedByGui": false
+  },
+  "fairyGui": {
+    "installed": true,
+    "requestedVersion": "6.1.4",
+    "launched": true,
+    "returnedWindowCount": 1,
+    "returnedWindowTitle": "FairyGUI 编辑器",
+    "accessibilityScope": "title-bar-only",
+    "nativeScreenshot": {
+      "supported": false,
+      "errorCode": "0x80004002",
+      "message": "SetIsBorderRequired failed: unsupported interface"
+    },
+    "openShortcutAttempted": true,
+    "openDialogObserved": false,
+    "projectOpened": false,
+    "saveRoundsObserved": [],
+    "modalObservationAvailable": false,
+    "fileHashParityAfterEditor": null
+  },
+  "neutralWriterArtifact": {
+    "source": "public build-fgui-project CLI",
+    "projectName": "GenericWriterFixture",
+    "downloadName": "GenericWriterFixture-FairyGUI.zip",
+    "byteSize": 1426,
+    "sha256": "bf62cd2789a7d0a44336e28a4c257d4fe91bee34c7673738bdf3f0662217c4ca",
+    "archiveValidatorClean": true,
+    "filesBeforeEditor": [
+      {
+        "path": "GenericWriterFixture.fairy",
+        "sha256": "bb74d97ef5039e471184ef3efeb3932e8e4843d5e856e56c88c2aec181ac92d8"
+      },
+      {
+        "path": "assets/Generated/package.xml",
+        "sha256": "0a90a6b2c18f6443344ec5462511bc12c27c748c079bcbc078dbf841c2d334d4"
+      },
+      {
+        "path": "assets/Generated/components/root-6e07d820.xml",
+        "sha256": "6a804a0c74f0f6ccd8fb1c8b60b0296b05cf62f1b7bbdb3236f4a3a781f08a6a"
+      },
+      {
+        "path": "assets/Generated/resources/generic-pixel-7fb786de.png",
+        "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+      }
+    ]
+  },
+  "screenshots": [],
+  "limitations": [
+    "No real Figma plugin screenshot or state transition is claimed.",
+    "No fresh FairyGUI open/save/close/reopen round trip is claimed.",
+    "The tracked 2026-08-20 FairyGUI transcript remains historical evidence and is not relabeled as this run."
+  ]
+}

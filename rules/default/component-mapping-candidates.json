@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "sources": ["figma-to-fgui", "auto-panel"],
+  "components": [
+    {
+      "key": "common_primary_button",
+      "figma": {"names": ["通用一级按钮"], "nodeIds": ["23:55"]},
+      "fgui": {"package": "Common", "component": "Common_Btn_Primary", "path": "Core/Button/Common_Btn_Primary.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupomj"},
+      "properties": {
+        "type": {"valueMap": {
+          "正常": {"type": "0", "isGray": "0"},
+          "白色": {"type": "1", "isGray": "0"},
+          "红色": {"type": "2", "isGray": "0"},
+          "黄色": {"type": "3", "isGray": "0"},
+          "置灰": {"type": "0", "isGray": "1"}
+        }},
+        "Size": {"valueMap": {"L": {"size": "0"}, "M": {"size": "1"}, "S": {"size": "2"}}}
+      },
+      "source": ["figma-to-fgui", "auto-panel"],
+      "status": "candidate"
+    },
+    {
+      "key": "common_icon_button",
+      "figma": {"names": ["通用图标按钮", "按钮_返回"], "nodeIds": ["17:4"]},
+      "fgui": {"package": "Common", "component": "Common_Btn_Icon", "path": "Core/Button/Common_Btn_Icon.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupomk"},
+      "properties": {}, "source": ["figma-to-fgui", "auto-panel"], "status": "candidate"
+    },
+    {
+      "key": "common_primary_cost_button",
+      "figma": {"names": ["带花费主按钮"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Btn_Primary_Cost", "path": "Core/Button/Common_Btn_Primary_Cost.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupoml"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_secondary_button",
+      "figma": {"names": ["次要按钮"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Btn_Secondary", "path": "Core/Button/Common_Btn_Secondary.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupomm"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_icon_text_button",
+      "figma": {"names": ["图标+文字按钮"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Btn_IconText", "path": "Core/Button/Common_Btn_IconText.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupomn"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_nav_tab",
+      "figma": {"names": ["导航栏切换页签容器"], "nodeIds": ["371:8"]},
+      "fgui": {"package": "Common", "component": "Common_Tab_NavBar", "path": "Core/Tab/Common_Tab_NavBar.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "ov9u832"},
+      "properties": {}, "source": ["figma-to-fgui", "auto-panel"], "status": "candidate"
+    },
+    {
+      "key": "common_nav_tab_item",
+      "figma": {"names": ["导航栏切换页签子项"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Tab_NavBar_Item", "path": "Core/Tab/Common_Tab_NavBar_Item.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "ov9u830"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_top_tab",
+      "figma": {"names": ["顶部栏切换页签容器"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Tab_TopBar", "path": "Core/Tab/Common_Tab_TopBar.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "g1ef836"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_top_tab_item",
+      "figma": {"names": ["顶部栏切换页签子项", "通用一级页签按钮"], "nodeIds": ["39:553"]},
+      "fgui": {"package": "Common", "component": "Common_Tab_TopBar_Item", "path": "Core/Tab/Common_Tab_TopBar_Item.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "g1ef835"},
+      "properties": {}, "source": ["figma-to-fgui", "auto-panel"], "status": "candidate"
+    },
+    {
+      "key": "common_drawer_window",
+      "figma": {"names": ["抽屉式窗口底板", "半弹窗_大中小"], "nodeIds": ["47:654"]},
+      "fgui": {"package": "Common", "component": "Common_Window_Drawer", "path": "Core/Window/Common_Window_Drawer.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "g1ef83h"},
+      "properties": {}, "source": ["figma-to-fgui", "auto-panel"], "status": "candidate"
+    },
+    {
+      "key": "common_popup_window",
+      "figma": {"names": ["通用弹窗底板", "小型弹窗", "中型弹窗", "大型弹窗"], "nodeIds": ["41:597", "43:609", "43:625"]},
+      "fgui": {"package": "Common", "component": "Common_Window_PopUp", "path": "Core/Window/Common_Window_PopUp.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupomo"},
+      "properties": {}, "source": ["figma-to-fgui", "auto-panel"], "status": "candidate"
+    },
+    {
+      "key": "common_message_popup",
+      "figma": {"names": ["消息弹窗底板", "二次确认"], "nodeIds": ["566:334"]},
+      "fgui": {"package": "Common", "component": "Common_Window_PopUp_Message", "path": "Core/Window/Common_Window_PopUp_Message.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f1nupomp"},
+      "properties": {}, "source": ["figma-to-fgui", "auto-panel"], "status": "candidate"
+    },
+    {
+      "key": "common_button_cost_value",
+      "figma": {"names": ["按钮花费数值"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Value_BtnCost", "path": "Core/Value/Common_Value_BtnCost.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "ov9u82w"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_property_value",
+      "figma": {"names": ["属性数值组件"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Value_Prop", "path": "Core/Value/Common_Value_Prop.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "v27f83n"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_hero_card",
+      "figma": {"names": ["伙伴卡片", "通用伙伴卡片"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Hero_Card", "path": "Hero/Common_Hero_Card.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "g1ef83b"},
+      "properties": {"Rarity": {"valueMap": {
+        "绿色": {"rarity": "0", "isEmpty": "0"}, "蓝色": {"rarity": "1", "isEmpty": "0"},
+        "紫色": {"rarity": "2", "isEmpty": "0"}, "橙色": {"rarity": "3", "isEmpty": "0"},
+        "红色": {"rarity": "4", "isEmpty": "0"}, "空": {"rarity": "0", "isEmpty": "1"}
+      }}},
+      "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_prop_142",
+      "figma": {"names": ["道具图标142"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Prop_142", "path": "Prop/Common_Prop_142.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "g1ef839"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_prop_192",
+      "figma": {"names": ["道具图标192"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Prop_192", "path": "Prop/Common_Prop_192.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "g1ef838"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_area_notification_1",
+      "figma": {"names": ["区域名称通知1"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Notification_AreaName_1", "path": "Notification/Common_Notification_AreaName_1.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "a76s1nupomf"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_area_notification_2",
+      "figma": {"names": ["区域名称通知2"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Notification_AreaName_2", "path": "Notification/Common_Notification_AreaName_2.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "a76s1nupomh"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    },
+    {
+      "key": "common_area_notification_3",
+      "figma": {"names": ["区域名称通知3"], "nodeIds": []},
+      "fgui": {"package": "Common", "component": "Common_Notification_AreaName_3", "path": "Notification/Common_Notification_AreaName_3.xml"},
+      "legacyHint": {"packageId": "qil5i1mk", "componentId": "mj051nupom6"},
+      "properties": {}, "source": ["figma-to-fgui"], "status": "candidate"
+    }
+  ]
+}

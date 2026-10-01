@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 1,
+  "mappingVersion": "2026.08.18",
+  "name": "figma2fgui 通用组件映射",
+  "components": [
+    {
+      "key": "common_primary_button",
+      "figma": {
+        "names": [
+          "通用一级按钮",
+          "通用1级按钮（用于全屏界面/弹窗的主按钮）"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "button",
+        "semanticName": "primaryAction",
+        "componentType": "button"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Btn_Primary",
+        "path": "Core/Button/Common_Btn_Primary.xml"
+      },
+      "properties": {
+        "type": {
+          "required": false,
+          "default": "正常",
+          "valueMap": {
+            "正常": {
+              "controller": "type",
+              "page": "0"
+            },
+            "白色": {
+              "controller": "type",
+              "page": "1"
+            },
+            "红色": {
+              "controller": "type",
+              "page": "2"
+            },
+            "黄色": {
+              "controller": "type",
+              "page": "3"
+            },
+            "置灰": {
+              "controller": "isGray",
+              "page": "1"
+            }
+          }
+        },
+        "Size": {
+          "required": false,
+          "default": "L",
+          "valueMap": {
+            "L": {
+              "controller": "size",
+              "page": "0"
+            },
+            "M": {
+              "controller": "size",
+              "page": "1"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "主操作按钮，type含5种颜色状态，置灰走isGray控制器"
+      },
+      "status": "candidate"
+    },
+    {
+      "key": "common_tertiary_button",
+      "figma": {
+        "names": [
+          "通用3级按钮"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "button",
+        "semanticName": "tertiaryAction",
+        "componentType": "button"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Btn_Tertiary",
+        "path": "Core/Button/Common_Btn_Tertiary.xml"
+      },
+      "properties": {
+        "type": {
+          "required": false,
+          "default": "正常",
+          "valueMap": {
+            "正常": {
+              "controller": "type",
+              "page": "0"
+            },
+            "白色": {
+              "controller": "type",
+              "page": "1"
+            },
+            "红色": {
+              "controller": "type",
+              "page": "2"
+            },
+            "黄色": {
+              "controller": "type",
+              "page": "3"
+            },
+            "置灰": {
+              "controller": "isGray",
+              "page": "1"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "三级辅助按钮，FGUI type控制器使用page 0,1,2,3,5（跳过4），置灰走isGray"
+      },
+      "status": "candidate"
+    },
+    {
+      "key": "common_navbar_tab",
+      "figma": {
+        "names": [
+          "通用导航栏页签"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "tab",
+        "semanticName": "navBarTab",
+        "componentType": "tab"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Tab_NavBar_Item",
+        "path": "Core/Tab/Common_Tab_NavBar_Item.xml"
+      },
+      "properties": {
+        "isSelected": {
+          "required": false,
+          "default": "false",
+          "valueMap": {
+            "false": {
+              "controller": "button",
+              "page": "0"
+            },
+            "true": {
+              "controller": "button",
+              "page": "1"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "导航栏页签单项，button控制器Radio模式，selected由父容器tab控制器联动"
+      },
+      "status": "candidate"
+    },
+    {
+      "key": "common_topbar_tab",
+      "figma": {
+        "names": [
+          "通用顶部切换页签"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "tab",
+        "semanticName": "topBarTab",
+        "componentType": "tab"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Tab_TopBar_Item",
+        "path": "Core/Tab/Common_Tab_TopBar_Item.xml"
+      },
+      "properties": {
+        "isSelected": {
+          "required": false,
+          "default": "false",
+          "valueMap": {
+            "false": {
+              "controller": "button",
+              "page": "0"
+            },
+            "true": {
+              "controller": "button",
+              "page": "1"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "顶部切换页签单项，button控制器Radio模式，含isLocked和isRedDot运行时状态"
+      },
+      "status": "candidate"
+    },
+    {
+      "key": "common_prop_192",
+      "figma": {
+        "names": [
+          "通用道具"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "prop",
+        "semanticName": "item",
+        "componentType": "prop"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Prop_192",
+        "path": "Prop/Common_Prop_192.xml"
+      },
+      "properties": {
+        "Rarity": {
+          "required": false,
+          "default": "绿色",
+          "valueMap": {
+            "绿色": {
+              "controller": "rarity",
+              "page": "0"
+            },
+            "蓝色": {
+              "controller": "rarity",
+              "page": "1"
+            },
+            "紫色": {
+              "controller": "rarity",
+              "page": "2"
+            },
+            "橙色": {
+              "controller": "rarity",
+              "page": "3"
+            },
+            "红色": {
+              "controller": "rarity",
+              "page": "4"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "道具图标192尺寸，Figma Size=192变体对应此FGUI组件"
+      },
+      "status": "candidate"
+    },
+    {
+      "key": "common_prop_100",
+      "figma": {
+        "names": [
+          "通用道具"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "prop",
+        "semanticName": "item",
+        "componentType": "prop"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Prop_100",
+        "path": "Prop/Common_Prop_100.xml"
+      },
+      "properties": {
+        "Rarity": {
+          "required": false,
+          "default": "绿色",
+          "valueMap": {
+            "绿色": {
+              "controller": "rarity",
+              "page": "0"
+            },
+            "蓝色": {
+              "controller": "rarity",
+              "page": "1"
+            },
+            "紫色": {
+              "controller": "rarity",
+              "page": "2"
+            },
+            "橙色": {
+              "controller": "rarity",
+              "page": "3"
+            },
+            "红色": {
+              "controller": "rarity",
+              "page": "4"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "道具图标100尺寸，Figma Size=100变体对应此FGUI组件"
+      },
+      "status": "candidate"
+    },
+    {
+      "key": "common_hero_card",
+      "figma": {
+        "names": [
+          "通用伙伴卡片"
+        ],
+        "nodeIds": [],
+        "componentKeys": []
+      },
+      "uir": {
+        "role": "card",
+        "semanticName": "heroCard",
+        "componentType": "card"
+      },
+      "fairygui": {
+        "package": "Common",
+        "component": "Common_Hero_Card",
+        "path": "Hero/Common_Hero_Card.xml"
+      },
+      "properties": {
+        "Rarity": {
+          "required": false,
+          "default": "绿色",
+          "valueMap": {
+            "绿色": {
+              "controller": "rarity",
+              "page": "0"
+            },
+            "蓝色": {
+              "controller": "rarity",
+              "page": "1"
+            },
+            "紫色": {
+              "controller": "rarity",
+              "page": "2"
+            },
+            "橙色": {
+              "controller": "rarity",
+              "page": "3"
+            },
+            "红色": {
+              "controller": "rarity",
+              "page": "4"
+            }
+          }
+        },
+        "isEmpty": {
+          "required": false,
+          "default": "false",
+          "valueMap": {
+            "false": {
+              "controller": "isEmpty",
+              "page": "0"
+            },
+            "true": {
+              "controller": "isEmpty",
+              "page": "1"
+            }
+          }
+        }
+      },
+      "fallback": {
+        "mode": "rasterSubtree",
+        "format": "png",
+        "reason": "component_mapping_missing"
+      },
+      "source": {
+        "owner": "UI需求组",
+        "document": "figma2fgui 组件库",
+        "note": "伙伴卡片，Rarity变体根据FGUI控制器推断，isEmpty为运行时空状态"
+      },
+      "status": "candidate"
+    }
+  ]
+}

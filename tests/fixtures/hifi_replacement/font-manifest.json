@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "fonts": [
+    {
+      "sourceFilename": "HYZhengYuan-75S.ttf",
+      "sizeBytes": 14955760,
+      "sha256": "00968481e6e8548f0d0302d3f70584fd84d5577e119176292fc7fa122b03a8e8",
+      "family": "HYZhengYuan-75S",
+      "typographicFamily": "HYZhengYuan",
+      "subfamily": "Regular",
+      "typographicSubfamily": "75S",
+      "fullName": "HYZhengYuan-75S",
+      "postScriptName": "HYZhengYuan-GES",
+      "version": "Version 9.01.00",
+      "weightClass": 600
+    },
+    {
+      "sourceFilename": "core sans es w01_55 medium.ttf",
+      "sizeBytes": 52484,
+      "sha256": "aa9ad3987bd173e2954273b768ce5f5e6696b054dd57ace9931aa4cb57e06b56",
+      "family": "CoreSansESW01-55Medium",
+      "subfamily": "Regular",
+      "fullName": "Core Sans ES W01 55 Medium",
+      "postScriptName": "CoreSansESW01-55Medium",
+      "version": "Version 1.10",
+      "weightClass": 500
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<packageDescription id="common01">
+  <resources>
+    <component id="primary1" name="Common_Btn_Primary.xml" path="/Core/Button/"/>
+  </resources>
+</packageDescription>

@@ -1,0 +1,45 @@
+{
+  "artifact": {
+    "byteSize": 1900,
+    "sha256": "bd04f9775d4cdf47ff8df9b830a884e0614b25b682110dbc7932fd3a727425d2"
+  },
+  "directories": [
+    "assets/Generated/Component/",
+    "assets/Generated/Img/",
+    "assets/Generated/Panel/"
+  ],
+  "editorVersion": "6.1.4",
+  "files": [
+    {
+      "match": true,
+      "path": "GenericWriterFixture.fairy",
+      "sha256": "bb74d97ef5039e471184ef3efeb3932e8e4843d5e856e56c88c2aec181ac92d8"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/Img/generic-pixel-7fb786de.png",
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/Panel/root-6e07d820.xml",
+      "sha256": "6f5590d941417a4b5850e281b244df8b9142e4ebae6c77e382b0b6133654dd78"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/package.xml",
+      "sha256": "40a4498b39478dd9d46feefabbc1ee0bbe02042cce57113a13641580a2842d35"
+    }
+  ],
+  "gate": {
+    "automatedValidation": ["manifest", "xml", "directory", "archive"],
+    "editorRoundTrip": "not-rerun"
+  },
+  "projectName": "GenericWriterFixture",
+  "provenance": {
+    "evidenceKind": "automated-byte-hash",
+    "fileHashSource": "deterministic-standard-layout-archive-members",
+    "representativeOnly": true
+  },
+  "schemaVersion": 1
+}

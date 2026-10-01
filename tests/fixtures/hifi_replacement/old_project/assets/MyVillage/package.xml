@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packageDescription id="myvillage01" name="MyVillage">
+  <resources>
+    <image id="imgboard01" name="Sketchboard.png" path="/Img/Lowfi/"/>
+    <component id="sharedbtn1" name="Button_Common.xml" path="/Common/"/>
+    <component id="sketch01" name="Panel_MyVillage_Sketchboard.xml" path="/Panel/" exported="true"/>
+  </resources>
+  <publish/>
+</packageDescription>

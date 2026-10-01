@@ -1,0 +1,44 @@
+{
+  "delayedCloseObservation": true,
+  "editorVersion": "6.1.4",
+  "files": [
+    {
+      "match": true,
+      "path": "GenericWriterFixture.fairy",
+      "postSha256": "bb74d97ef5039e471184ef3efeb3932e8e4843d5e856e56c88c2aec181ac92d8",
+      "preSha256": "bb74d97ef5039e471184ef3efeb3932e8e4843d5e856e56c88c2aec181ac92d8"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/package.xml",
+      "postSha256": "0a90a6b2c18f6443344ec5462511bc12c27c748c079bcbc078dbf841c2d334d4",
+      "preSha256": "0a90a6b2c18f6443344ec5462511bc12c27c748c079bcbc078dbf841c2d334d4"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/components/root-6e07d820.xml",
+      "postSha256": "6a804a0c74f0f6ccd8fb1c8b60b0296b05cf62f1b7bbdb3236f4a3a781f08a6a",
+      "preSha256": "6a804a0c74f0f6ccd8fb1c8b60b0296b05cf62f1b7bbdb3236f4a3a781f08a6a"
+    },
+    {
+      "match": true,
+      "path": "assets/Generated/resources/generic-pixel-7fb786de.png",
+      "postSha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+      "preSha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    }
+  ],
+  "finalWindowCount": 0,
+  "modalObserved": false,
+  "projectName": "GenericWriterFixture",
+  "provenance": {
+    "evidenceKind": "window-title-and-byte-hash",
+    "representativeOnly": true
+  },
+  "returnedWindowTitles": ["GenericWriterFixture", "GenericWriterFixture"],
+  "saveRounds": ["open-save-close", "reopen-save-close"],
+  "schemaVersion": 1,
+  "stateScreenshot": {
+    "errorCode": "0x80004002",
+    "supported": false
+  }
+}

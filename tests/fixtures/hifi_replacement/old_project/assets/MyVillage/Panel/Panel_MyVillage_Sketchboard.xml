@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="750,420" opaque="false">
+  <controller name="page" pages="0,default,1,active"/>
+  <displayList>
+    <image id="board_bg" name="BoardBg" src="imgboard01" fileName="Sketchboard.png" xy="0,0" size="750,420"/>
+    <text id="title_bar" name="TitleBar" xy="46,28" size="360,48" text="Village Notes"/>
+    <graph id="silhouette_01" name="CharacterSilhouette" xy="52,102" size="208,244" type="rect">
+      <gearDisplay controller="page" pages="1"/>
+    </graph>
+    <component id="btn_next" name="Btn_Next" src="sharedbtn1" xy="566,338" size="120,44"/>
+    <component id="btn_reset" name="Btn_Reset" src="sharedbtn1" xy="420,338" size="120,44">
+      <gearDisplay controller="page" pages="0"/>
+    </component>
+    <graph id="old_badge" name="Badge" xy="448,96" size="44,44" type="ellipse"/>
+    <mystery id="unknown_fx" name="LegacyFx" xy="300,130" size="80,80" customFlag="preserve-me"/>
+  </displayList>
+  <transition name="intro">
+    <item type="XY" target="btn_reset" time="0" duration="0.3" startValue="420,360" endValue="420,338"/>
+  </transition>
+</component>

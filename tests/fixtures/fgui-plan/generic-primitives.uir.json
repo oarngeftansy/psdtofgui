@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "documentId": "uir:generic-primitives",
+  "compilerVersion": "uir-v1",
+  "source": {
+    "kind": "figma",
+    "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "selectionId": "generic-primitives"
+  },
+  "roots": ["node:root"],
+  "nodes": {
+    "node:root": {
+      "id": "node:root",
+      "source": {
+        "nodeId": "root",
+        "type": "FRAME",
+        "name": "Generic screen",
+        "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "semantic": {},
+      "children": ["node:label", "node:illustration"],
+      "zIndex": 0,
+      "geometry": {"resolvedBounds": {"x": 0, "y": 0, "width": 400, "height": 300}},
+      "conversion": {"mode": "native"}
+    },
+    "node:label": {
+      "id": "node:label",
+      "source": {
+        "nodeId": "label",
+        "type": "TEXT",
+        "name": "Generic label",
+        "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "semantic": {},
+      "parentId": "node:root",
+      "zIndex": 0,
+      "geometry": {"resolvedBounds": {"x": 16, "y": 20, "width": 180, "height": 32}},
+      "text": {"content": "Sample title", "style": {"fontSize": 24, "textAlignHorizontal": "CENTER"}},
+      "conversion": {"mode": "native"}
+    },
+    "node:illustration": {
+      "id": "node:illustration",
+      "source": {
+        "nodeId": "illustration",
+        "type": "RECTANGLE",
+        "name": "Generic illustration",
+        "fingerprint": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "semantic": {},
+      "parentId": "node:root",
+      "zIndex": 1,
+      "geometry": {"resolvedBounds": {"x": 40, "y": 80, "width": 160, "height": 120}},
+      "conversion": {"mode": "native", "assetRef": "asset:illustration"}
+    }
+  },
+  "assets": {
+    "asset:illustration": {
+      "id": "asset:illustration",
+      "logicalId": "generic-illustration",
+      "mimeType": "image/png",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  }
+}

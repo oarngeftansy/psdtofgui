@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component size="120,44" extention="Button">
+  <displayList>
+    <text id="shared_label" name="title" xy="12,10" size="96,24" text="Common"/>
+  </displayList>
+</component>
