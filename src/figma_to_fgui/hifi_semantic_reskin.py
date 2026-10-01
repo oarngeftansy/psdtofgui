@@ -23,6 +23,11 @@ _DANGEROUS_RETIRE_ROLES = {
     "runtime_data",
     "unresolved_component_reference",
 }
+_STATE_DECISION_ROLES = {
+    "controller_driven",
+    "transition_target",
+    "controller_action_target",
+}
 
 
 def _flatten(manifest: SelectionManifest) -> dict[str, SelectionNode]:
@@ -111,6 +116,29 @@ def _safe_to_retire(
     if parent is not None and parent.auto_layout is not None and parent.layout_excludes_invisible:
         return False
     return True
+
+
+def _requires_target_state_decision(old: FguiObjectRef) -> bool:
+    """Return True when legacy paint cannot be globally kept or retired safely.
+
+    A PSD reskin describes one target state. If an old visual inside the paired
+    semantic component is controller/transition driven and owns no PSD pixels,
+    silently keeping it recreates the old-skin overlay. Globally hiding it is
+    equally unsafe because other controller states may still need it. Such an
+    object must therefore remain unresolved until the writer has page-specific
+    retirement evidence.
+    """
+    return (
+        old.default_visible
+        and not old.structural_only
+        and old.object_type.casefold() in _VISUAL_OLD_TYPES
+        and bool(
+            old.dynamic_properties
+            or old.controller_refs
+            or old.transition_refs
+            or _STATE_DECISION_ROLES.intersection(old.behavior_roles)
+        )
+    )
 
 
 def _can_own_raster(old: FguiObjectRef) -> bool:
@@ -274,8 +302,9 @@ def normalize_psd_semantic_reskin(
     This pass changes the *unit of action*: a paired FairyGUI component and PSD
     group form one semantic reskin bundle. PSD decoration leaves are allocated
     to existing image/loader/convertible-graph hosts before any leaf is allowed
-    to become a new display object. Obsolete static legacy paint may retire,
-    while state/runtime-driven paint is never globally hidden by this pass.
+    to become a new display object. Obsolete static legacy paint may retire;
+    state-driven paint without target-page evidence is blocked instead of being
+    silently kept or globally hidden.
     """
     if not manifest.top_level_nodes or not manifest.top_level_nodes[0].id.startswith("psd-root:"):
         return draft
@@ -446,22 +475,33 @@ def normalize_psd_semantic_reskin(
             if index is None:
                 continue
             item = items[index]
-            if not _safe_to_retire(old, old_by_id):
-                continue
             if item.figma_node_id is not None and item.figma_node_id not in visual_ids:
                 continue
-            items[index] = item.model_copy(update={
-                "figma_node_id": None,
-                "figma_name": None,
-                "figma_bounds": None,
-                "owned_source_ids": (),
-                "owned_group_id": None,
-                "retained_source_ids": (),
-                "status": "fgui_only",
-                "action": "keep_old",
-                "visual_disposition": "retire",
-                "graph_conversion_proven": False,
-            })
+            if _safe_to_retire(old, old_by_id):
+                items[index] = item.model_copy(update={
+                    "figma_node_id": None,
+                    "figma_name": None,
+                    "figma_bounds": None,
+                    "owned_source_ids": (),
+                    "owned_group_id": None,
+                    "retained_source_ids": (),
+                    "status": "fgui_only",
+                    "action": "keep_old",
+                    "visual_disposition": "retire",
+                    "graph_conversion_proven": False,
+                })
+                continue
+            if _requires_target_state_decision(old):
+                # The component/group pairing proves this object belongs to the
+                # reskinned semantic region, but its controller/transition state
+                # means neither KEEP nor global RETIRE is justified. Stop here
+                # instead of generating a candidate with old pixels layered on
+                # top of the new PSD skin.
+                items[index] = item.model_copy(update={
+                    "status": "blocked",
+                    "action": None,
+                    "visual_disposition": "other_state",
+                })
 
     reused_source_ids = absorbed_source_ids | reused_text_ids
     if reused_source_ids:
