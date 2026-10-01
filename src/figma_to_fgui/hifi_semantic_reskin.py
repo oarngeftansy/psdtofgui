@@ -10,6 +10,7 @@ from figma_to_fgui.hifi_replacement_models import (
     HifiMappingDraft,
     HifiMappingItem,
 )
+from figma_to_fgui.hifi_semantic_pairing import recover_semantic_component_pairs
 
 OwnedVisualValidator = Callable[[str, frozenset[str], frozenset[str]], bool]
 
@@ -155,12 +156,13 @@ def _match_text_children(
     items: list[HifiMappingItem],
     bundle_children: tuple[FguiObjectRef, ...],
     leaves: tuple[SelectionNode, ...],
-) -> None:
+) -> set[str]:
     """Use unique runtime text as a semantic correspondence inside a bundle."""
     old_texts = [old for old in bundle_children if old.object_type.casefold() in {"text", "richtext"}]
     source_texts = [node for node in leaves if node.type.upper() == "TEXT" and _normalized_text(node.text)]
     if not old_texts or not source_texts:
-        return
+        return set()
+    matched_ids: set[str] = set()
     item_index = {item.old_object_id: index for index, item in enumerate(items) if item.old_object_id}
     for old in old_texts:
         key = _normalized_text(old.effective_text)
@@ -184,18 +186,33 @@ def _match_text_children(
             "visual_disposition": "preserve",
             "preserve_runtime_text": old.runtime_text_override,
         })
+        matched_ids.add(node.id)
+    return matched_ids
 
 
-def _geometry_affinity(old: FguiObjectRef, node: SelectionNode) -> float:
+def _source_box(root: SelectionNode, node: SelectionNode) -> tuple[float, float, float, float]:
+    viewport = root.properties.get("psdViewportBounds")
+    offset_x = float(viewport[0]) if isinstance(viewport, (tuple, list)) and len(viewport) >= 2 else 0.0
+    offset_y = float(viewport[1]) if isinstance(viewport, (tuple, list)) and len(viewport) >= 2 else 0.0
+    return (
+        node.bounds.x - root.bounds.x - offset_x,
+        node.bounds.y - root.bounds.y - offset_y,
+        node.bounds.width,
+        node.bounds.height,
+    )
+
+
+def _geometry_affinity(old: FguiObjectRef, node: SelectionNode, root: SelectionNode) -> float:
     """Conservative geometry affinity for assigning a PSD leaf to a free host."""
     if min(old.width, old.height, node.bounds.width, node.bounds.height) <= 0:
         return 0.0
+    node_x, node_y, node_width, node_height = _source_box(root, node)
     old_center = (old.x + old.width / 2, old.y + old.height / 2)
-    new_center = (node.bounds.x + node.bounds.width / 2, node.bounds.y + node.bounds.height / 2)
-    scale = max(old.width, old.height, node.bounds.width, node.bounds.height, 1.0)
+    new_center = (node_x + node_width / 2, node_y + node_height / 2)
+    scale = max(old.width, old.height, node_width, node_height, 1.0)
     center_score = max(0.0, 1.0 - math.dist(old_center, new_center) / (scale * 1.5))
     old_area = old.width * old.height
-    new_area = node.bounds.width * node.bounds.height
+    new_area = node_width * node_height
     area_score = min(old_area, new_area) / max(old_area, new_area)
     return center_score * 0.6 + area_score * 0.4
 
@@ -205,6 +222,7 @@ def _allocate_free_hosts(
     visual_hosts: list[FguiObjectRef],
     owners: list[tuple[FguiObjectRef, int, HifiMappingItem]],
     visual_nodes: tuple[SelectionNode, ...],
+    root: SelectionNode,
 ) -> None:
     """Prefer MODIFY of existing hosts before absorbing leaves into one owner."""
     item_index = {item.old_object_id: index for index, item in enumerate(items) if item.old_object_id}
@@ -216,7 +234,7 @@ def _allocate_free_hosts(
         if not remaining:
             break
         ranked = sorted(
-            ((_geometry_affinity(old, node), node) for node in remaining),
+            ((_geometry_affinity(old, node, root), node) for node in remaining),
             key=lambda pair: (pair[0], pair[1].bounds.width * pair[1].bounds.height),
             reverse=True,
         )
@@ -262,6 +280,10 @@ def normalize_psd_semantic_reskin(
     if not manifest.top_level_nodes or not manifest.top_level_nodes[0].id.startswith("psd-root:"):
         return draft
 
+    # Establish the semantic component ↔ PSD Group correspondence before
+    # allocating individual leaves. This is the policy-26 unit of action.
+    draft = recover_semantic_component_pairs(inventory, manifest, draft)
+
     nodes = _flatten(manifest)
     parents = _parent_ids(manifest)
     old_by_id = {old.object_id: old for old in inventory.objects}
@@ -277,6 +299,7 @@ def normalize_psd_semantic_reskin(
     pair_by_old = {old.object_id: node.id for _, old, node in component_pairs}
     pair_group_ids = set(pair_by_old.values())
     absorbed_source_ids: set[str] = set()
+    reused_text_ids: set[str] = set()
     matched_group_visual_ids: set[str] = set()
 
     depth: dict[str, int] = {}
@@ -310,7 +333,7 @@ def normalize_psd_semantic_reskin(
         if not local_leaves:
             continue
 
-        _match_text_children(items, bundle_children, local_leaves)
+        reused_text_ids.update(_match_text_children(items, bundle_children, local_leaves))
 
         visual_nodes = tuple(leaf for leaf in local_leaves if _psd_visual_leaf(leaf))
         visual_ids = {node.id for node in visual_nodes}
@@ -340,7 +363,7 @@ def normalize_psd_semantic_reskin(
             ):
                 owners.append((old, index, item))
 
-        _allocate_free_hosts(items, visual_hosts, owners, visual_nodes)
+        _allocate_free_hosts(items, visual_hosts, owners, visual_nodes, manifest.top_level_nodes[0])
 
         if not owners:
             candidates = [old for old in visual_hosts if _can_own_raster(old)]
@@ -440,13 +463,14 @@ def normalize_psd_semantic_reskin(
                 "graph_conversion_proven": False,
             })
 
-    if absorbed_source_ids:
+    reused_source_ids = absorbed_source_ids | reused_text_ids
+    if reused_source_ids:
         items = [
             item for item in items
             if not (
                 item.old_object_id is None
                 and item.status == "hifi_added"
-                and item.figma_node_id in absorbed_source_ids
+                and item.figma_node_id in reused_source_ids
             )
         ]
 
