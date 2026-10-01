@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 
 from figma_to_fgui.figma_selection import SelectionManifest, SelectionNode
@@ -14,6 +15,13 @@ OwnedVisualValidator = Callable[[str, frozenset[str], frozenset[str]], bool]
 
 _VISUAL_OLD_TYPES = {"graph", "image", "loader"}
 _VISUAL_PSD_KINDS = {"shape", "pixel", "smartobject"}
+_DANGEROUS_RETIRE_ROLES = {
+    "controller_driven",
+    "transition_target",
+    "controller_action_target",
+    "runtime_data",
+    "unresolved_component_reference",
+}
 
 
 def _flatten(manifest: SelectionManifest) -> dict[str, SelectionNode]:
@@ -61,23 +69,47 @@ def _is_descendant(node_id: str, ancestor_id: str, parents: dict[str, str | None
     return False
 
 
-def _safe_to_retire(old: FguiObjectRef) -> bool:
-    """Only globally retire paint that has no state/runtime visual contract.
+def _bundle_children(
+    component_id: str,
+    children_by_parent: dict[str, list[FguiObjectRef]],
+) -> tuple[FguiObjectRef, ...]:
+    """Visual/text children owned by one semantic component.
 
-    Policy 26 still implements retirement as a default visibility change in the
-    patcher. Therefore a gear/controller/transition-driven child is not safe
-    to retire globally. It remains visible until a state-aware writer can
-    prove a target-page-only change.
+    FairyGUI ``group`` nodes are layout/structure, not independent semantic UI
+    entities. Their descendants therefore remain part of the component bundle.
+    Nested component instances are semantic boundaries and are not traversed.
     """
-    return (
-        old.default_visible
-        and not old.structural_only
-        and old.object_type.casefold() in _VISUAL_OLD_TYPES
-        and not old.dynamic_properties
-        and not old.controller_refs
-        and not old.transition_refs
-        and not old.behavior_roles
-    )
+    result: list[FguiObjectRef] = []
+    pending = list(children_by_parent.get(component_id, ()))
+    while pending:
+        child = pending.pop()
+        result.append(child)
+        if child.object_type.casefold() == "component":
+            continue
+        if child.object_type.casefold() == "group" or child.structural_only:
+            pending.extend(children_by_parent.get(child.object_id, ()))
+    return tuple(result)
+
+
+def _safe_to_retire(
+    old: FguiObjectRef,
+    old_by_id: dict[str, FguiObjectRef],
+) -> bool:
+    """Retire only paint whose visibility is not part of a known state contract."""
+    if (
+        not old.default_visible
+        or old.structural_only
+        or old.object_type.casefold() not in {"graph", "image"}
+        or old.dynamic_properties
+        or old.controller_refs
+        or old.transition_refs
+        or _DANGEROUS_RETIRE_ROLES.intersection(old.behavior_roles)
+    ):
+        return False
+    parent = old_by_id.get(old.parent_id or "")
+    if parent is not None and parent.auto_layout is not None and parent.layout_excludes_invisible:
+        return False
+    return True
 
 
 def _can_own_raster(old: FguiObjectRef) -> bool:
@@ -121,11 +153,11 @@ def _component_pairs(
 
 def _match_text_children(
     items: list[HifiMappingItem],
-    direct_children: tuple[FguiObjectRef, ...],
+    bundle_children: tuple[FguiObjectRef, ...],
     leaves: tuple[SelectionNode, ...],
 ) -> None:
     """Use unique runtime text as a semantic correspondence inside a bundle."""
-    old_texts = [old for old in direct_children if old.object_type.casefold() in {"text", "richtext"}]
+    old_texts = [old for old in bundle_children if old.object_type.casefold() in {"text", "richtext"}]
     source_texts = [node for node in leaves if node.type.upper() == "TEXT" and _normalized_text(node.text)]
     if not old_texts or not source_texts:
         return
@@ -142,8 +174,6 @@ def _match_text_children(
             continue
         item = items[index]
         node = matches[0]
-        # Do not displace a confident mapping to another source text. This is
-        # a semantic rescue for fgui_only/uncertain children, not a remapper.
         if item.action in {"accept", "retarget"} and item.figma_node_id not in {None, node.id}:
             continue
         items[index] = item.model_copy(update={
@@ -156,6 +186,63 @@ def _match_text_children(
         })
 
 
+def _geometry_affinity(old: FguiObjectRef, node: SelectionNode) -> float:
+    """Conservative geometry affinity for assigning a PSD leaf to a free host."""
+    if min(old.width, old.height, node.bounds.width, node.bounds.height) <= 0:
+        return 0.0
+    old_center = (old.x + old.width / 2, old.y + old.height / 2)
+    new_center = (node.bounds.x + node.bounds.width / 2, node.bounds.y + node.bounds.height / 2)
+    scale = max(old.width, old.height, node.bounds.width, node.bounds.height, 1.0)
+    center_score = max(0.0, 1.0 - math.dist(old_center, new_center) / (scale * 1.5))
+    old_area = old.width * old.height
+    new_area = node.bounds.width * node.bounds.height
+    area_score = min(old_area, new_area) / max(old_area, new_area)
+    return center_score * 0.6 + area_score * 0.4
+
+
+def _allocate_free_hosts(
+    items: list[HifiMappingItem],
+    visual_hosts: list[FguiObjectRef],
+    owners: list[tuple[FguiObjectRef, int, HifiMappingItem]],
+    visual_nodes: tuple[SelectionNode, ...],
+) -> None:
+    """Prefer MODIFY of existing hosts before absorbing leaves into one owner."""
+    item_index = {item.old_object_id: index for index, item in enumerate(items) if item.old_object_id}
+    owner_ids = {old.object_id for old, _, _ in owners}
+    claimed_nodes = {item.figma_node_id for _, _, item in owners if item.figma_node_id}
+    remaining = [node for node in visual_nodes if node.id not in claimed_nodes]
+    free_hosts = [old for old in visual_hosts if old.object_id not in owner_ids and _can_own_raster(old)]
+    for old in sorted(free_hosts, key=lambda value: value.child_index, reverse=True):
+        if not remaining:
+            break
+        ranked = sorted(
+            ((_geometry_affinity(old, node), node) for node in remaining),
+            key=lambda pair: (pair[0], pair[1].bounds.width * pair[1].bounds.height),
+            reverse=True,
+        )
+        affinity, node = ranked[0]
+        # A tiny ornament should not resize a full-size runtime loader merely
+        # to reduce ADD count. Low-affinity residuals are bundled later.
+        if affinity < 0.48:
+            continue
+        index = item_index.get(old.object_id)
+        if index is None:
+            continue
+        item = items[index].model_copy(update={
+            "figma_node_id": node.id,
+            "figma_name": node.name,
+            "status": "matched",
+            "action": "accept",
+            "visual_disposition": "preserve",
+            "graph_conversion_proven": (
+                items[index].graph_conversion_proven
+                or (old.object_type.casefold() == "graph" and old.raster_conversion_allowed)
+            ),
+        })
+        owners.append((old, index, item))
+        remaining.remove(node)
+
+
 def normalize_psd_semantic_reskin(
     inventory: FguiComponentInventory,
     manifest: SelectionManifest,
@@ -165,16 +252,12 @@ def normalize_psd_semantic_reskin(
 ) -> HifiMappingDraft:
     """Normalize a PSD reskin at semantic component/group granularity.
 
-    ``build_mapping`` deliberately starts from object-level correspondences.
-    For a reskin that is only the evidence-gathering layer: a PSD button/card
-    group is the target visual bundle for the already existing FairyGUI
-    component. Extra PSD decoration leaves are absorbed by existing visual
-    hosts instead of becoming new display objects, and obsolete *static* old
-    paint is retired while its object identity stays intact.
-
-    The pass is intentionally conservative. It never retires controller,
-    transition or runtime-driven visual children, and it leaves genuinely new
-    PSD entities outside an already paired semantic group as ``add_visual``.
+    The existing mapper remains responsible for evidence and initial pairing.
+    This pass changes the *unit of action*: a paired FairyGUI component and PSD
+    group form one semantic reskin bundle. PSD decoration leaves are allocated
+    to existing image/loader/convertible-graph hosts before any leaf is allowed
+    to become a new display object. Obsolete static legacy paint may retire,
+    while state/runtime-driven paint is never globally hidden by this pass.
     """
     if not manifest.top_level_nodes or not manifest.top_level_nodes[0].id.startswith("psd-root:"):
         return draft
@@ -182,6 +265,10 @@ def normalize_psd_semantic_reskin(
     nodes = _flatten(manifest)
     parents = _parent_ids(manifest)
     old_by_id = {old.object_id: old for old in inventory.objects}
+    children_by_parent: dict[str, list[FguiObjectRef]] = {}
+    for old in inventory.objects:
+        if old.parent_id:
+            children_by_parent.setdefault(old.parent_id, []).append(old)
     items = list(draft.items)
     component_pairs = _component_pairs(draft, nodes, old_by_id)
     if not component_pairs:
@@ -190,9 +277,8 @@ def normalize_psd_semantic_reskin(
     pair_by_old = {old.object_id: node.id for _, old, node in component_pairs}
     pair_group_ids = set(pair_by_old.values())
     absorbed_source_ids: set[str] = set()
+    matched_group_visual_ids: set[str] = set()
 
-    # Inner semantic components claim their own PSD subtree first. A parent
-    # bundle must not rasterize a nested button/red-dot/card into its skin.
     depth: dict[str, int] = {}
     for group_id in pair_group_ids:
         value = 0
@@ -203,14 +289,14 @@ def normalize_psd_semantic_reskin(
         depth[group_id] = value
 
     for _, old_component, group in sorted(component_pairs, key=lambda pair: depth[pair[2].id], reverse=True):
-        direct_children = tuple(old for old in inventory.objects if old.parent_id == old_component.object_id)
-        if not direct_children:
+        bundle_children = _bundle_children(old_component.object_id, children_by_parent)
+        if not bundle_children:
             continue
 
         leaves = _descendant_leaves(group)
         nested_group_ids = {
             source_group_id
-            for child in direct_children
+            for child in bundle_children
             if child.object_type.casefold() == "component"
             for source_group_id in (pair_by_old.get(child.object_id),)
             if source_group_id and source_group_id != group.id
@@ -224,17 +310,18 @@ def normalize_psd_semantic_reskin(
         if not local_leaves:
             continue
 
-        _match_text_children(items, direct_children, local_leaves)
+        _match_text_children(items, bundle_children, local_leaves)
 
         visual_nodes = tuple(leaf for leaf in local_leaves if _psd_visual_leaf(leaf))
         visual_ids = {node.id for node in visual_nodes}
         if not visual_ids:
             continue
+        matched_group_visual_ids.update(visual_ids)
         all_local_ids = {leaf.id for leaf in local_leaves}
 
         item_index = {item.old_object_id: index for index, item in enumerate(items) if item.old_object_id}
         visual_hosts = [
-            old for old in direct_children
+            old for old in bundle_children
             if old.object_type.casefold() in _VISUAL_OLD_TYPES and not old.structural_only and not old.out_of_scope
         ]
         if not visual_hosts:
@@ -253,13 +340,12 @@ def normalize_psd_semantic_reskin(
             ):
                 owners.append((old, index, item))
 
+        _allocate_free_hosts(items, visual_hosts, owners, visual_nodes)
+
         if not owners:
             candidates = [old for old in visual_hosts if _can_own_raster(old)]
             if not candidates:
                 continue
-            # Existing top-most image/loader is the least invasive host for a
-            # whole reskinned surface; Graphs are only eligible when explicit
-            # raster conversion was already authorized by the inventory.
             chosen = max(
                 candidates,
                 key=lambda old: (
@@ -281,6 +367,7 @@ def normalize_psd_semantic_reskin(
                 "figma_name": anchor.name,
                 "status": "matched",
                 "action": "accept",
+                "visual_disposition": "preserve",
                 "graph_conversion_proven": (
                     item.graph_conversion_proven
                     or (chosen.object_type.casefold() == "graph" and chosen.raster_conversion_allowed)
@@ -289,9 +376,6 @@ def normalize_psd_semantic_reskin(
 
         owner_anchor_ids = {item.figma_node_id for _, _, item in owners if item.figma_node_id in visual_ids}
         residual_ids = visual_ids - owner_anchor_ids
-        # Decorative leaves do not represent new UI entities. Assign them to
-        # the highest-z existing visual host so the PSD group becomes one
-        # semantic MODIFY operation rather than MODIFY + ADD + ADD.
         residual_owner = max(owners, key=lambda entry: entry[0].child_index)
 
         proposed: list[tuple[FguiObjectRef, int, HifiMappingItem, set[str]]] = []
@@ -332,8 +416,6 @@ def normalize_psd_semantic_reskin(
             })
             absorbed_source_ids.update(owned_ids)
 
-        # Any old static paint inside this already matched semantic component
-        # that owns no target pixels is legacy skin, not a KEEP visual.
         for old in visual_hosts:
             if old.object_id in owner_ids:
                 continue
@@ -341,11 +423,8 @@ def normalize_psd_semantic_reskin(
             if index is None:
                 continue
             item = items[index]
-            if not _safe_to_retire(old):
+            if not _safe_to_retire(old, old_by_id):
                 continue
-            # Only retire an old child when its previous source correspondence
-            # belongs to this same group or it was already unmatched. This
-            # prevents a broad parent group from stealing a sibling entity.
             if item.figma_node_id is not None and item.figma_node_id not in visual_ids:
                 continue
             items[index] = item.model_copy(update={
@@ -371,8 +450,26 @@ def normalize_psd_semantic_reskin(
             )
         ]
 
-    unresolved = sum(1 for item in items if item.action is None)
+    # Inside a semantic component/group pair a decorative leaf is not allowed
+    # to silently become a new FairyGUI object. If bundle ownership could not
+    # absorb it, keep the mapping unresolved so the pipeline fails safe.
+    normalized: list[HifiMappingItem] = []
+    for item in items:
+        if (
+            item.old_object_id is None
+            and item.status == "hifi_added"
+            and item.figma_node_id in matched_group_visual_ids
+            and item.figma_node_id not in absorbed_source_ids
+        ):
+            normalized.append(item.model_copy(update={
+                "status": "blocked",
+                "action": None,
+            }))
+        else:
+            normalized.append(item)
+
+    unresolved = sum(1 for item in normalized if item.action is None)
     return draft.model_copy(update={
-        "items": tuple(items),
+        "items": tuple(normalized),
         "unresolved_count": unresolved,
     })
