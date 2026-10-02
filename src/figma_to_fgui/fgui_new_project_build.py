@@ -306,7 +306,7 @@ def build_new_project(
             except Exception:  # noqa: BLE001,S110 - preserve the closed failure.
                 pass
         raise
-    except Exception:
+    except Exception:  # noqa: BLE001 - convert unexpected preparation failures at the public boundary.
         if staged_candidate is not None:
             try:
                 staged_candidate.unlink(missing_ok=True)
