@@ -141,10 +141,16 @@ class HifiReplacementStore:
         mapping: HifiMappingDraft,
         idempotency_key: str,
     ) -> StoredHifiReplacement:
+        # Mapping policy is part of the meaning of a replacement request. A
+        # caller may legitimately reuse the same request key after a policy
+        # upgrade; returning a cached policy-26 session to policy-27 code would
+        # skip the new semantic mapping entirely. Namespace idempotency by the
+        # effective policy so every policy gets one stable session of its own.
+        policy_key = f"{idempotency_key}:policy:{mapping.policy_revision}"
         with self._connect() as connection:
             existing = connection.execute(
                 "SELECT * FROM hifi_replacements WHERE owner_device_id=? AND idempotency_key=?",
-                (owner_device_id, idempotency_key),
+                (owner_device_id, policy_key),
             ).fetchone()
             if existing is not None:
                 return self._stored(existing)
@@ -161,7 +167,7 @@ class HifiReplacementStore:
                 (
                     session_id,
                     owner_device_id,
-                    idempotency_key,
+                    policy_key,
                     target.project_id,
                     selection_id,
                     target.model_dump_json(),
