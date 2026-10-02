@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from figma_to_fgui.figma_selection import SelectionManifest, SelectionNode
 from figma_to_fgui.hifi_replacement_models import (
+    HIFI_MAPPING_POLICY_REVISION,
     FguiBehaviorSummary,
     FguiComponentInventory,
     FguiObjectRef,
@@ -36,13 +37,11 @@ def _old(
     *,
     parent_id: str | None = None,
     child_index: int = 0,
-    x: float = 100.0,
-    y: float = 100.0,
-    width: float = 300.0,
-    height: float = 80.0,
     effective_text: str | None = None,
     raster_conversion_allowed: bool = False,
     behavior_roles: tuple[str, ...] = (),
+    dynamic_properties: tuple[str, ...] = (),
+    default_visible: bool = True,
 ) -> FguiObjectRef:
     return FguiObjectRef(
         object_id=object_id,
@@ -50,14 +49,16 @@ def _old(
         object_type=object_type,
         parent_id=parent_id,
         child_index=child_index,
-        x=x,
-        y=y,
-        width=width,
-        height=height,
+        x=100.0,
+        y=100.0,
+        width=300.0,
+        height=80.0,
         protected_sha256=_SHA,
         effective_text=effective_text,
         raster_conversion_allowed=raster_conversion_allowed,
         behavior_roles=behavior_roles,
+        dynamic_properties=dynamic_properties,
+        default_visible=default_visible,
     )
 
 
@@ -150,7 +151,7 @@ def _item(
 
 def _draft(*items: HifiMappingItem) -> HifiMappingDraft:
     return HifiMappingDraft(
-        policy_revision=26,
+        policy_revision=HIFI_MAPPING_POLICY_REVISION,
         mapping_revision=1,
         old_canvas_size=(1080.0, 1920.0),
         source_canvas_size=(1080.0, 1920.0),
@@ -177,19 +178,19 @@ def test_group_reskin_absorbs_decoration_and_retires_static_legacy_graph() -> No
         effective_text="Noble Reception",
     )
     bg = _node("bg", "shape", node_type="VECTOR", order=0)
-    ornament = _node("ornament", "shape", node_type="VECTOR", x=108.0, y=106.0, width=284.0, height=68.0, order=1)
-    text = _node(
-        "title_psd",
-        "type",
-        node_type="TEXT",
-        x=145.0,
-        y=120.0,
-        width=210.0,
-        height=35.0,
-        text="Noble Reception",
-        order=2,
+    ornament = _node(
+        "ornament", "shape", node_type="VECTOR",
+        x=108.0, y=106.0, width=284.0, height=68.0, order=1,
     )
-    group = _node("button_group", "group", node_type="GROUP", children=(bg, ornament, text))
+    text = _node(
+        "title_psd", "type", node_type="TEXT",
+        x=145.0, y=120.0, width=210.0, height=35.0,
+        text="Noble Reception", order=2,
+    )
+    group = _node(
+        "button_group", "group", node_type="GROUP",
+        children=(bg, ornament, text),
+    )
 
     draft = _draft(
         _item("old:button", old=component, node=group, status="matched", action="accept"),
@@ -207,16 +208,18 @@ def test_group_reskin_absorbs_decoration_and_retires_static_legacy_graph() -> No
     )
     by_old = {item.old_object_id: item for item in result.items if item.old_object_id}
 
+    assert by_old["button"].owned_group_id == "button_group"
+    assert not by_old["button"].owned_source_ids
     assert set(by_old["icon_bg"].owned_source_ids) == {"bg", "ornament"}
     assert by_old["icon_bg"].owned_group_id == "button_group"
     assert by_old["legacy_bg"].action == "keep_old"
     assert by_old["legacy_bg"].visual_disposition == "retire"
-    assert not any(item.status == "hifi_added" and item.figma_node_id == "ornament" for item in result.items)
+    assert not any(item.status == "hifi_added" for item in result.items)
 
 
-def test_group_reskin_reuses_multiple_existing_visual_hosts_before_adding() -> None:
+def test_group_reskin_uses_proven_runtime_partition_and_bundles_residuals() -> None:
     component = _old("challenge", "component")
-    old_back = _old("bg_common_gary", "image", parent_id="challenge", child_index=0)
+    old_back = _old("legacy_back", "image", parent_id="challenge", child_index=0)
     old_front = _old(
         "icon_bg",
         "loader",
@@ -225,9 +228,18 @@ def test_group_reskin_reuses_multiple_existing_visual_hosts_before_adding() -> N
         behavior_roles=("runtime_object", "nested_instance"),
     )
     back = _node("back", "pixel", order=0)
-    front = _node("front", "shape", node_type="VECTOR", width=296.0, height=76.0, x=102.0, y=102.0, order=1)
-    ornament = _node("center_ornament", "shape", node_type="VECTOR", x=220.0, y=105.0, width=60.0, height=70.0, order=2)
-    group = _node("challenge_group", "group", node_type="GROUP", children=(back, front, ornament))
+    front = _node(
+        "front", "shape", node_type="VECTOR",
+        width=296.0, height=76.0, x=102.0, y=102.0, order=1,
+    )
+    ornament = _node(
+        "center_ornament", "shape", node_type="VECTOR",
+        x=220.0, y=105.0, width=60.0, height=70.0, order=2,
+    )
+    group = _node(
+        "challenge_group", "group", node_type="GROUP",
+        children=(back, front, ornament),
+    )
 
     draft = _draft(
         _item("old:challenge", old=component, node=group, status="matched", action="accept"),
@@ -245,23 +257,67 @@ def test_group_reskin_reuses_multiple_existing_visual_hosts_before_adding() -> N
     )
     by_old = {item.old_object_id: item for item in result.items if item.old_object_id}
 
-    assert by_old["bg_common_gary"].action == "accept"
-    assert by_old["icon_bg"].action == "accept"
-    assert by_old["bg_common_gary"].visual_disposition == "preserve"
-    assert by_old["icon_bg"].visual_disposition == "preserve"
-    assert {"back", "front", "center_ornament"} == (
-        set(by_old["bg_common_gary"].owned_source_ids)
-        | set(by_old["icon_bg"].owned_source_ids)
-    )
+    assert set(by_old["icon_bg"].owned_source_ids) == {
+        "back", "front", "center_ornament"
+    }
+    assert by_old["legacy_back"].visual_disposition == "retire"
+    assert by_old["legacy_back"].action == "keep_old"
     assert not any(item.status == "hifi_added" for item in result.items)
 
 
-def test_unabsorbed_visual_inside_matched_group_fails_safe_instead_of_add() -> None:
+def test_other_state_visual_is_preserved_but_not_counted_as_current_visual_owner() -> None:
+    component = _old("challenge", "component")
+    other_state = _old(
+        "bg_common_gary",
+        "image",
+        parent_id="challenge",
+        child_index=0,
+        behavior_roles=("controller_driven",),
+        dynamic_properties=("visible",),
+        default_visible=False,
+    )
+    current = _old(
+        "icon_bg",
+        "loader",
+        parent_id="challenge",
+        child_index=1,
+        behavior_roles=("controller_driven", "runtime_object"),
+        dynamic_properties=("visible", "icon"),
+        default_visible=True,
+    )
+    skin = _node("skin", "pixel")
+    group = _node(
+        "challenge_group", "group", node_type="GROUP", children=(skin,)
+    )
+    draft = _draft(
+        _item("component", old=component, node=group, status="matched", action="accept"),
+        _item("other", old=other_state),
+        _item("current", old=current, node=skin, status="matched", action="accept"),
+    )
+
+    result = normalize_psd_semantic_reskin(
+        _inventory(component, other_state, current),
+        _manifest(group),
+        draft,
+        owned_visual_validator=lambda _group, _owned, _retained: True,
+    )
+    by_old = {item.old_object_id: item for item in result.items if item.old_object_id}
+
+    assert by_old["bg_common_gary"].action == "keep_old"
+    assert by_old["bg_common_gary"].visual_disposition == "other_state"
+    assert by_old["bg_common_gary"].figma_node_id is None
+    assert set(by_old["icon_bg"].owned_source_ids) == {"skin"}
+    assert result.unresolved_count == 0
+
+
+def test_unabsorbed_leaf_inside_matched_group_fails_safe_instead_of_add() -> None:
     component = _old("label_only", "component")
     title = _old("title", "text", parent_id="label_only", effective_text="Only text")
     new_art = _node("new_art", "pixel")
     text = _node("text", "type", node_type="TEXT", text="Only text")
-    group = _node("label_group", "group", node_type="GROUP", children=(new_art, text))
+    group = _node(
+        "label_group", "group", node_type="GROUP", children=(new_art, text)
+    )
     draft = _draft(
         _item("old:component", old=component, node=group, status="matched", action="accept"),
         _item("old:title", old=title, node=text, status="matched", action="accept"),
