@@ -1,0 +1,79 @@
+name: Policy 27 one-shot runtime hardening
+
+on:
+  push:
+    branches:
+      - fix/policy27-semantic-reskin
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/policy27-semantic-reskin
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Harden semantic bundle ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/figma_to_fgui/hifi_semantic_reskin.py')
+          text = path.read_text('utf-8')
+
+          marker = '''_RUNTIME_VISUAL_ROLES = {\n    "runtime_data",\n    "runtime_object",\n    "nested_behavior",\n    "instance_parameterized",\n    "unresolved_component_reference",\n}\n'''
+          replacement = marker + '''_UNSAFE_BUNDLE_HOST_PROPERTIES = {\n    "xy",\n    "size",\n    "scale",\n    "alpha",\n    "rotation",\n    "color",\n    "strokeColor",\n    "frame",\n    "playing",\n    "grayed",\n    "touchable",\n}\n'''
+          if marker not in text:
+              raise SystemExit('runtime roles marker missing')
+          text = text.replace(marker, replacement, 1)
+
+          marker = '''def _can_own_raster(old: FguiObjectRef) -> bool:\n    kind = old.object_type.casefold()\n    return kind in {"image", "loader"} or (\n        kind == "graph" and old.raster_conversion_allowed\n    )\n\n\n'''
+          replacement = marker + '''def _can_own_target_bundle(old: FguiObjectRef) -> bool:\n    """Reject hosts whose other controller pages own geometry/style state.\n\n    GearDisplay/GearIcon are compatible with replacing the base target skin:\n    visibility/icon pages can still override it. Geometry/look/color/animation\n    gears are not compatible with one whole-bundle raster because rewriting the\n    base visual could silently alter another controller state's contract.\n    """\n    return (\n        _can_own_raster(old)\n        and not _UNSAFE_BUNDLE_HOST_PROPERTIES.intersection(old.dynamic_properties)\n    )\n\n\n'''
+          if marker not in text:
+              raise SystemExit('raster host marker missing')
+          text = text.replace(marker, replacement, 1)
+
+          old = '''        current_hosts = [\n            old\n            for old in visual_hosts\n            if old.default_visible and _can_own_raster(old)\n        ]\n'''
+          new = '''        current_hosts = [\n            old\n            for old in visual_hosts\n            if old.default_visible and _can_own_target_bundle(old)\n        ]\n'''
+          if old not in text:
+              raise SystemExit('current host block missing')
+          text = text.replace(old, new, 1)
+
+          marker = '''    # Defensive uniqueness gate for all semantic bundle pixels.\n    seen_source_ids: set[str] = set()\n'''
+          replacement = '''    # Any raw accepted item that still points at a visual leaf now owned by a\n    # semantic bundle is a stale competing correspondence. Surface it during\n    # mapping instead of waiting for the XML patcher to discover duplicate\n    # ownership later. Native text is handled separately above.\n    semantic_visual_ids = set(absorbed_source_ids)\n    normalized = [\n        item.model_copy(update={\n            "figma_node_id": None,\n            "figma_name": None,\n            "figma_bounds": None,\n            "status": "blocked",\n            "action": None,\n        })\n        if (\n            item.action in {"accept", "retarget"}\n            and item.figma_node_id in semantic_visual_ids\n            and item.figma_node_id not in item.owned_source_ids\n            and (item.old_object_type or "").casefold() not in {"text", "richtext"}\n        )\n        else item\n        for item in normalized\n    ]\n\n    # Defensive uniqueness gate for all semantic bundle pixels.\n    seen_source_ids: set[str] = set()\n'''
+          if marker not in text:
+              raise SystemExit('uniqueness marker missing')
+          text = text.replace(marker, replacement, 1)
+          path.write_text(text, 'utf-8')
+
+          doc = Path('POLICY27.md')
+          text = doc.read_text('utf-8')
+          needle = '- One PSD visual leaf may have only one render owner.\n'
+          extra = (needle + '- A whole-bundle visual host may use GearDisplay/GearIcon, but hosts with '
+                   'GearXY/GearSize/GearLook/GearColor/GearAnimation-style dynamic properties must block '
+                   'unless state-specific ownership is proven.\n')
+          if needle in text and 'GearXY/GearSize/GearLook' not in text:
+              text = text.replace(needle, extra, 1)
+          doc.write_text(text, 'utf-8')
+          PY
+          python -m pip install 'ruff==0.16.10'
+          python -m ruff check --fix \
+            src/figma_to_fgui/hifi_semantic_reskin.py \
+            tests/unit/test_hifi_policy27_runtime_contract.py
+          rm .github/workflows/policy27-hardening.yml
+      - name: Commit hardening
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Harden Policy 27 runtime-state bundle ownership'
+          git push origin HEAD:fix/policy27-semantic-reskin
