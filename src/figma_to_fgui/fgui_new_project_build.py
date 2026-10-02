@@ -109,10 +109,10 @@ def _validated_failure_boundary(error: NewProjectBuildError, fallback: str) -> s
     """Use only an exact allow-listed code from an existing public error."""
     try:
         diagnostics = error.diagnostics
-        if type(diagnostics) is not tuple or len(diagnostics) != 1:
+        if not isinstance(diagnostics, tuple) or len(diagnostics) != 1:
             return fallback
         diagnostic = diagnostics[0]
-        if type(diagnostic) is not Diagnostic or type(diagnostic.code) is not str:
+        if not isinstance(diagnostic, Diagnostic) or not isinstance(diagnostic.code, str):
             return fallback
         prefix = "fgui.writer.build."
         suffix = "_failed"
