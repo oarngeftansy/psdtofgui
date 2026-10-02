@@ -25,6 +25,12 @@ from figma_to_fgui.uir_models import UIRDocument
 from figma_to_fgui.uir_validate import validate_uir
 
 
+@pytest.fixture(autouse=True)
+def _stable_cli_rendering(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("COLUMNS", "240")
+
+
 def test_help_lists_all_atomic_commands() -> None:
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0

@@ -37,11 +37,16 @@ jobs:
       - name: Full unit suite
         run: |
           set -o pipefail
-          python -m pytest -q -rA --tb=line tests/unit 2>&1 | tee pytest-output.txt
+          python -m pytest -q -rA --tb=short tests/unit 2>&1 | tee pytest-output.txt
       - name: Report failing tests as annotations
         if: failure()
         run: |
           grep -E "^(FAILED|ERROR) " pytest-output.txt | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          grep -E "^E " pytest-output.txt | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
             echo "::error::${line}"
           done
           exit 1
