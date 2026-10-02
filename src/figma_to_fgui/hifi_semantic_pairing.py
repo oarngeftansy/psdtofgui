@@ -124,7 +124,7 @@ def _geometry_score(
     old_area = old.width * old.height
     new_area = box[2] * box[3]
     size = min(old_area, new_area) / max(old_area, new_area)
-    return position * 0.65 + size * 0.35
+    return float(position * 0.65 + size * 0.35)
 
 
 def _normalized_bounds(
