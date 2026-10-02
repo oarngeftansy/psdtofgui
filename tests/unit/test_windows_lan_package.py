@@ -8,6 +8,8 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = ROOT / "packaging" / "windows-lan"
 
@@ -89,6 +91,7 @@ def test_lan_server_install_limits_firewall_and_publishes_versioned_release() ->
     assert ".Replace('http://192.168.1.100:8780', $origin)" in installer
 
 
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell runtime")
 def test_client_sync_repairs_a_corrupted_installed_release(tmp_path: Path) -> None:
     release_id = "202609030001"
     server_root = tmp_path / "server" / "client" / "releases"
@@ -152,6 +155,7 @@ def test_client_sync_repairs_a_corrupted_installed_release(tmp_path: Path) -> No
         server.server_close()
 
 
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell runtime")
 def test_background_updater_can_complete_a_real_sync_once(tmp_path: Path) -> None:
     release_id = "202609040002"
     server_root = tmp_path / "server" / "client" / "releases"

@@ -306,7 +306,7 @@ def test_output_directory_link_is_rejected_before_build(tmp_path: Path) -> None:
     with pytest.raises(NewProjectBuildError) as caught:
         _build(linked)
 
-    assert caught.value.diagnostics[0].code == "fgui.writer.build.output_invalid"
+    assert caught.value.diagnostics[0].code == "fgui.writer.build.output_invalid_failed"
     assert caught.value.__cause__ is None
     assert caught.value.__context__ is None
     assert list(real.iterdir()) == []

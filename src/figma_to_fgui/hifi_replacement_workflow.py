@@ -24,6 +24,7 @@ from figma_to_fgui.hifi_replacement_store import (
     HifiReplacementStoreError,
     StoredHifiReplacement,
 )
+from figma_to_fgui.hifi_semantic_reskin import normalize_psd_semantic_reskin
 from figma_to_fgui.hifi_state_visuals import derive_state_nodes
 from figma_to_fgui.hifi_visual_similarity import exact_visual_similarity, static_image_path
 from figma_to_fgui.project_package import build_project_package, remove_generated_directories
@@ -400,6 +401,12 @@ class HifiReplacementWorkflow:
             full_bleed_visual_validator=validate_background,
             graph_raster_validator=graph_raster_available,
         )
+        preliminary = normalize_psd_semantic_reskin(
+            inventory,
+            manifest,
+            preliminary,
+            owned_visual_validator=validate_owned,
+        )
         manifest, _, _ = self._manifest(
             source_id, owner_device_id, inventory=inventory,
             owned_visuals=self._owned_visuals(preliminary),
@@ -425,6 +432,12 @@ class HifiReplacementWorkflow:
                 and item.figma_node_id
                 and item.action == "accept"
             },
+        )
+        mapping = normalize_psd_semantic_reskin(
+            inventory,
+            mapping_manifest,
+            mapping,
+            owned_visual_validator=validate_owned,
         )
         return self._store.begin(
             owner_device_id, source_id, target, mapping, idempotency_key
@@ -474,9 +487,9 @@ class HifiReplacementWorkflow:
             None,
         )
         try:
-            # ``keep_old`` is a runtime-identity decision.  Policy 25 may have
+            # ``keep_old`` is a runtime-identity decision. the current mapping policy may have
             # already classified the object's target-state pixels as retired
-            # (or as another-state/structural).  Re-confirming keep_old in the
+            # (or as another-state/structural). Re-confirming keep_old in the
             # review UI must not turn that policy result back into visible
             # legacy paint.
             if (

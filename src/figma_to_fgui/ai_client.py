@@ -191,6 +191,31 @@ def build_chat_completion_payload(
     return payload
 
 
+def _json_nesting_exceeds_limit(data: bytes, limit: int = 256) -> bool:
+    """Bound JSON container nesting without decoding private response content."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for byte in data:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:  # backslash
+                escaped = True
+            elif byte == 0x22:  # quote
+                in_string = False
+            continue
+        if byte == 0x22:
+            in_string = True
+        elif byte in (0x5B, 0x7B):  # [ {
+            depth += 1
+            if depth > limit:
+                return True
+        elif byte in (0x5D, 0x7D):  # ] }
+            depth = max(0, depth - 1)
+    return False
+
+
 def _extract_content(payload: object) -> str:
     if not isinstance(payload, dict):
         raise AIAnalysisError(AIReasonCode.RESPONSE_SCHEMA)
@@ -288,6 +313,8 @@ class OpenAICompatibleSemanticClient:
     ) -> SemanticResponse:
         payload = build_chat_completion_payload(self.config.model, summary, screenshot)
         body = self._request(payload)
+        if _json_nesting_exceeds_limit(body):
+            raise AIAnalysisError(AIReasonCode.RESPONSE_JSON)
         try:
             response_payload = json.loads(body)
         except (ValueError, UnicodeError, RecursionError):

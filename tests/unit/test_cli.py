@@ -268,9 +268,9 @@ def test_new_project_json_loaders_require_canonical_bytes(loader, fixture: Path,
 def test_new_project_config_rejects_duplicate_keys_and_bool_header(tmp_path: Path) -> None:
     fixture = Path("tests/fixtures/fgui-new-project/config.json")
     duplicate = tmp_path / "duplicate.json"
-    duplicate.write_text(fixture.read_text("utf-8").replace('"namingPolicyVersion": 1', '"namingPolicyVersion": 1, "namingPolicyVersion": 1'), "utf-8")
+    duplicate.write_text(fixture.read_text("utf-8").replace('"namingPolicyVersion":1', '"namingPolicyVersion":1,"namingPolicyVersion":1'), "utf-8")
     coerced = tmp_path / "coerced.json"
-    coerced.write_text(fixture.read_text("utf-8").replace('"namingPolicyVersion": 1', '"namingPolicyVersion": true'), "utf-8")
+    coerced.write_text(fixture.read_text("utf-8").replace('"namingPolicyVersion":1', '"namingPolicyVersion":true'), "utf-8")
 
     with pytest.raises(typer.BadParameter):
         _load_new_project_config(duplicate)
@@ -281,9 +281,9 @@ def test_new_project_config_rejects_duplicate_keys_and_bool_header(tmp_path: Pat
 def test_plan_loader_rejects_duplicate_keys_and_numeric_string_header(tmp_path: Path) -> None:
     fixture = Path("tests/fixtures/fgui-new-project/generic-plan-v2.json")
     duplicate = tmp_path / "duplicate.json"
-    duplicate.write_text(fixture.read_text("utf-8").replace('"schemaVersion": 2', '"schemaVersion": 2, "schemaVersion": 2'), "utf-8")
+    duplicate.write_text(fixture.read_text("utf-8").replace('"schemaVersion":2', '"schemaVersion":2,"schemaVersion":2'), "utf-8")
     coerced = tmp_path / "coerced.json"
-    coerced.write_text(fixture.read_text("utf-8").replace('"schemaVersion": 2', '"schemaVersion": "2"'), "utf-8")
+    coerced.write_text(fixture.read_text("utf-8").replace('"schemaVersion":2', '"schemaVersion":"2"'), "utf-8")
 
     with pytest.raises(typer.BadParameter):
         _load_plan_v2(duplicate)

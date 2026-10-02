@@ -1,0 +1,60 @@
+name: Policy 27 CI
+
+on:
+  push:
+    branches:
+      - main
+      - fix/policy27-semantic-reskin
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e '.[dev,server]'
+      - name: Ruff
+        run: python -m ruff check src tests
+      - name: Policy 27 regression tests
+        run: >-
+          python -m pytest -q
+          tests/unit/test_hifi_semantic_pairing.py
+          tests/unit/test_hifi_semantic_reskin.py
+          tests/unit/test_hifi_policy27_compatibility.py
+          tests/unit/test_hifi_policy27_runtime_contract.py
+          tests/unit/test_hifi_target_state_reskin.py
+          tests/unit/test_hifi_review_policy27.py
+          tests/unit/test_hifi_replacement_store.py
+      - name: Full unit suite
+        run: python -m pytest -q tests/unit
+      - name: Policy 27 strict typing
+        run: >-
+          python -m mypy --follow-imports=skip
+          src/figma_to_fgui/hifi_semantic_pairing.py
+          src/figma_to_fgui/hifi_semantic_reskin.py
+          src/figma_to_fgui/hifi_review.py
+          src/figma_to_fgui/hifi_replacement_store.py
+      - name: Legacy type-debt ceiling
+        shell: bash
+        run: |
+          set +e
+          python -m mypy src 2>&1 | tee /tmp/mypy-full.log
+          errors=$(grep -c ': error:' /tmp/mypy-full.log || true)
+          echo "Legacy full-project mypy errors: $errors"
+          if [ "$errors" -gt 86 ]; then
+            echo "Type debt increased above the audited baseline of 86 errors."
+            exit 1
+          fi
+          if [ "$errors" -gt 0 ]; then
+            echo "::warning::Legacy mypy debt remains: $errors errors (ceiling 86). Policy 27 modules are checked separately and must be clean."
+          fi
+          exit 0
