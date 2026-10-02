@@ -487,7 +487,7 @@ class HifiReplacementWorkflow:
             None,
         )
         try:
-            # ``keep_old`` is a runtime-identity decision. Policy 26 may have
+            # ``keep_old`` is a runtime-identity decision. the current mapping policy may have
             # already classified the object's target-state pixels as retired
             # (or as another-state/structural). Re-confirming keep_old in the
             # review UI must not turn that policy result back into visible

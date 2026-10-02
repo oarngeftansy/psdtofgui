@@ -1676,10 +1676,12 @@ def build_mapping(
                 visual_owner = old_by_id[owner_id]
                 old_area = max(1.0, visual_owner.width * visual_owner.height)
 
-                def spare_score(node: SelectionNode) -> tuple[float, int]:
+                def spare_score(
+                    node: SelectionNode, owner_area: float = old_area
+                ) -> tuple[float, int]:
                     box = _selection_box(manifest, node, inventory)
                     node_area = max(1.0, box[2] * box[3])
-                    size_similarity = min(old_area, node_area) / max(old_area, node_area)
+                    size_similarity = min(owner_area, node_area) / max(owner_area, node_area)
                     return size_similarity, -int(node.properties.get("psdDocumentIndex", 0))
 
                 selected = max(remaining_sources, key=spare_score)

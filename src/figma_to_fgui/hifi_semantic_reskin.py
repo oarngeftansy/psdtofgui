@@ -122,9 +122,11 @@ def _safe_static_retire(old: FguiObjectRef, old_by_id: dict[str, FguiObjectRef])
     ):
         return False
     parent = old_by_id.get(old.parent_id or "")
-    if parent is not None and parent.auto_layout is not None and parent.layout_excludes_invisible:
-        return False
-    return True
+    return not (
+        parent is not None
+        and parent.auto_layout is not None
+        and parent.layout_excludes_invisible
+    )
 
 
 def _psd_visual_leaf(node: SelectionNode) -> bool:

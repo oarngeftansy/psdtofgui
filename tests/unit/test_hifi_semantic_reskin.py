@@ -14,7 +14,6 @@ from figma_to_fgui.hifi_replacement_models import (
 from figma_to_fgui.hifi_semantic_reskin import normalize_psd_semantic_reskin
 from figma_to_fgui.models import Bounds
 
-
 _SHA = "0" * 64
 
 

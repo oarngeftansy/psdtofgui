@@ -7,7 +7,6 @@ from figma_to_fgui.hifi_replacement_models import (
     FguiComponentInventory,
     FguiObjectRef,
     HifiMappingDraft,
-    HifiMappingItem,
 )
 
 
