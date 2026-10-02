@@ -32,6 +32,7 @@ jobs:
           tests/unit/test_hifi_semantic_pairing.py
           tests/unit/test_hifi_semantic_reskin.py
           tests/unit/test_hifi_policy27_compatibility.py
+          tests/unit/test_hifi_policy27_runtime_contract.py
           tests/unit/test_hifi_target_state_reskin.py
           tests/unit/test_hifi_review_policy27.py
           tests/unit/test_hifi_replacement_store.py
