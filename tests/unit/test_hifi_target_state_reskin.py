@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from figma_to_fgui.figma_selection import SelectionManifest, SelectionNode
 from figma_to_fgui.hifi_replacement_models import (
+    HIFI_MAPPING_POLICY_REVISION,
     FguiBehaviorSummary,
     FguiComponentInventory,
     FguiObjectRef,
@@ -128,7 +129,7 @@ def _item(
 
 def _draft(*items: HifiMappingItem) -> HifiMappingDraft:
     return HifiMappingDraft(
-        policy_revision=26,
+        policy_revision=HIFI_MAPPING_POLICY_REVISION,
         mapping_revision=1,
         old_canvas_size=(1080.0, 1920.0),
         source_canvas_size=(1080.0, 1920.0),
@@ -222,5 +223,5 @@ def test_target_visible_state_driven_visual_without_psd_ownership_blocks() -> No
 
     assert dynamic.status == "blocked"
     assert dynamic.action is None
-    assert dynamic.visual_disposition == "other_state"
+    assert dynamic.visual_disposition == "preserve"
     assert result.unresolved_count == 1
