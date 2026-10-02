@@ -1,0 +1,39 @@
+name: Policy 27 CI
+
+on:
+  push:
+    branches:
+      - main
+      - fix/policy27-semantic-reskin
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e '.[dev]'
+      - name: Ruff
+        run: python -m ruff check src tests
+      - name: Mypy
+        run: python -m mypy src
+      - name: Policy 27 regression tests
+        run: >-
+          python -m pytest -q
+          tests/unit/test_hifi_semantic_pairing.py
+          tests/unit/test_hifi_semantic_reskin.py
+          tests/unit/test_hifi_policy27_compatibility.py
+          tests/unit/test_hifi_target_state_reskin.py
+          tests/unit/test_hifi_review_policy27.py
+          tests/unit/test_hifi_replacement_store.py
+      - name: Full unit suite
+        run: python -m pytest -q tests/unit
