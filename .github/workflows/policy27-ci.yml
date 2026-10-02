@@ -35,7 +35,16 @@ jobs:
           tests/unit/test_hifi_review_policy27.py
           tests/unit/test_hifi_replacement_store.py
       - name: Full unit suite
-        run: python -m pytest -q tests/unit
+        run: |
+          set -o pipefail
+          python -m pytest -q -rA --tb=line tests/unit 2>&1 | tee pytest-output.txt
+      - name: Report failing tests as annotations
+        if: failure()
+        run: |
+          grep -E "^(FAILED|ERROR) " pytest-output.txt | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          exit 1
       - name: Policy 27 strict typing
         run: >-
           python -m mypy --follow-imports=skip
