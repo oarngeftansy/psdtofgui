@@ -13,7 +13,7 @@ HifiMappingStatus = Literal[
 HifiMappingAction = Literal["accept", "retarget", "keep_old", "add_visual", "exception", "preserve_structure"]
 LegacyVisualDisposition = Literal["preserve", "retire", "other_state", "structural"]
 LogicalBoundsPolicy = Literal["preserve", "resize"]
-HIFI_MAPPING_POLICY_REVISION = 26
+HIFI_MAPPING_POLICY_REVISION = 27
 
 
 class HifiTargetRef(StrictVersionedModel):
