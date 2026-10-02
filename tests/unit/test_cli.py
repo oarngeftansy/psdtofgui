@@ -25,7 +25,6 @@ from figma_to_fgui.service_contracts import ApplyResult, ApplyStatus
 from figma_to_fgui.uir_models import UIRDocument
 from figma_to_fgui.uir_validate import validate_uir
 
-
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
