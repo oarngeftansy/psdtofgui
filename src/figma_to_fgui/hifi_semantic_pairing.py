@@ -26,7 +26,9 @@ def _flatten(manifest: SelectionManifest) -> tuple[SelectionNode, ...]:
 
 def _parents(manifest: SelectionManifest) -> dict[str, str | None]:
     result: dict[str, str | None] = {}
-    pending = [(root, None) for root in manifest.top_level_nodes]
+    pending: list[tuple[SelectionNode, str | None]] = [
+        (root, None) for root in manifest.top_level_nodes
+    ]
     while pending:
         node, parent = pending.pop()
         result[node.id] = parent
