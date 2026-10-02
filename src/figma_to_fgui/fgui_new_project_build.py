@@ -197,9 +197,6 @@ def write_declared_files(
 def atomic_publish(candidate: Path, output_directory: Path, manifest: NewProjectManifest) -> Path:
     """Publish the validated candidate in one filesystem replacement."""
     del manifest
-    # Each build owns its output directory.  A fixed short storage name keeps
-    # the returned ordinary Path usable by tools that still apply MAX_PATH;
-    # the user-facing download name and the full integrity hash remain separate.
     published = output_directory / "artifact.zip"
     filesystem_target = io_path(published)
     if filesystem_target.exists() and _is_link_or_reparse(filesystem_target):
@@ -262,16 +259,10 @@ def build_new_project(
         return files
 
     files = _run_gate("xml", serialize_and_validate)
-
     staged_candidate: Path | None = None
 
     def prepare_candidate() -> tuple[Path, str, int]:
         nonlocal staged_candidate
-        # Expand the editable project tree under the system's short temporary
-        # root. API artifact directories are already deep enough that readable
-        # source names can otherwise cross the legacy Windows path boundary.
-        # The validated ZIP is still staged back into ``output`` before the
-        # final same-directory atomic publication.
         with TemporaryDirectory(prefix="fgui-new-project-") as raw:
             temporary = Path(raw)
             project_root = _run_gate(
@@ -307,9 +298,7 @@ def build_new_project(
         return staged_candidate, archive_sha256, archive_size
 
     try:
-        staged, archive_sha256, archive_size = _run_gate(
-            "directory-write", prepare_candidate
-        )
+        staged, archive_sha256, archive_size = prepare_candidate()
     except NewProjectBuildError:
         if staged_candidate is not None:
             try:
@@ -317,6 +306,13 @@ def build_new_project(
             except Exception:  # noqa: BLE001,S110 - preserve the closed failure.
                 pass
         raise
+    except Exception:
+        if staged_candidate is not None:
+            try:
+                staged_candidate.unlink(missing_ok=True)
+            except Exception:  # noqa: BLE001,S110 - preserve the closed failure.
+                pass
+        raise _fail("directory-write") from None
     try:
         published = _run_gate("publish", lambda: atomic_publish(staged, output, manifest))
     except NewProjectBuildError:
