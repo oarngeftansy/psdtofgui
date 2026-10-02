@@ -27,6 +27,19 @@ _RUNTIME_VISUAL_ROLES = {
     "instance_parameterized",
     "unresolved_component_reference",
 }
+_UNSAFE_BUNDLE_HOST_PROPERTIES = {
+    "xy",
+    "size",
+    "scale",
+    "alpha",
+    "rotation",
+    "color",
+    "strokeColor",
+    "frame",
+    "playing",
+    "grayed",
+    "touchable",
+}
 
 
 def _flatten(manifest: SelectionManifest) -> dict[str, SelectionNode]:
@@ -108,6 +121,20 @@ def _can_own_raster(old: FguiObjectRef) -> bool:
     kind = old.object_type.casefold()
     return kind in {"image", "loader"} or (
         kind == "graph" and old.raster_conversion_allowed
+    )
+
+
+def _can_own_target_bundle(old: FguiObjectRef) -> bool:
+    """Reject hosts whose other controller pages own geometry/style state.
+
+    GearDisplay/GearIcon are compatible with replacing the base target skin:
+    visibility/icon pages can still override it. Geometry/look/color/animation
+    gears are not compatible with one whole-bundle raster because rewriting the
+    base visual could silently alter another controller state's contract.
+    """
+    return (
+        _can_own_raster(old)
+        and not _UNSAFE_BUNDLE_HOST_PROPERTIES.intersection(old.dynamic_properties)
     )
 
 
@@ -416,7 +443,7 @@ def normalize_psd_semantic_reskin(
         current_hosts = [
             old
             for old in visual_hosts
-            if old.default_visible and _can_own_raster(old)
+            if old.default_visible and _can_own_target_bundle(old)
         ]
 
         # One semantic component has one default target-bundle raster owner.
@@ -544,6 +571,29 @@ def normalize_psd_semantic_reskin(
             }))
         else:
             normalized.append(item)
+
+    # Any raw accepted item that still points at a visual leaf now owned by a
+    # semantic bundle is a stale competing correspondence. Surface it during
+    # mapping instead of waiting for the XML patcher to discover duplicate
+    # ownership later. Native text is handled separately above.
+    semantic_visual_ids = set(absorbed_source_ids)
+    normalized = [
+        item.model_copy(update={
+            "figma_node_id": None,
+            "figma_name": None,
+            "figma_bounds": None,
+            "status": "blocked",
+            "action": None,
+        })
+        if (
+            item.action in {"accept", "retarget"}
+            and item.figma_node_id in semantic_visual_ids
+            and item.figma_node_id not in item.owned_source_ids
+            and (item.old_object_type or "").casefold() not in {"text", "richtext"}
+        )
+        else item
+        for item in normalized
+    ]
 
     # Defensive uniqueness gate for all semantic bundle pixels.
     seen_source_ids: set[str] = set()

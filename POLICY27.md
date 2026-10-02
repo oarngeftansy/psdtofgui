@@ -21,6 +21,7 @@ The old component remains the runtime object. The target PSD group replaces its 
 - Other-state paint stays available to its Controller state.
 - Current-state dynamic/runtime paint without proven target ownership blocks candidate generation.
 - One PSD visual leaf may have only one render owner.
+- A whole-bundle visual host may use GearDisplay/GearIcon, but hosts with GearXY/GearSize/GearLook/GearColor/GearAnimation-style dynamic properties must block unless state-specific ownership is proven.
 
 ## Compatibility boundary
 
