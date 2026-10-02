@@ -78,11 +78,7 @@ def _bundle_children(
     component_id: str,
     children_by_parent: dict[str, list[FguiObjectRef]],
 ) -> tuple[FguiObjectRef, ...]:
-    """Build one semantic component's legacy visual/text bundle.
-
-    FairyGUI groups are structural containers, so this walks through them.
-    Nested components are semantic boundaries and remain independent bundles.
-    """
+    """Return the local legacy bundle, crossing FGUI groups but not components."""
     result: list[FguiObjectRef] = []
     pending = list(children_by_parent.get(component_id, ()))
     while pending:
@@ -116,13 +112,7 @@ def _can_own_raster(old: FguiObjectRef) -> bool:
 
 
 def _safe_static_retire(old: FguiObjectRef, old_by_id: dict[str, FguiObjectRef]) -> bool:
-    """Authorize target-state retirement only for static legacy paint.
-
-    `behavior_protected` is intentionally not used here because every expanded
-    nested object is protected at the instance boundary. Policy 27 preserves
-    that runtime identity separately; retirement is decided from the object's
-    actual visual/state roles instead.
-    """
+    """Retire only static target-state paint; never retire runtime/state mechanics."""
     if (
         not old.default_visible
         or old.structural_only
@@ -148,6 +138,29 @@ def _psd_visual_leaf(node: SelectionNode) -> bool:
 
 def _normalized_text(value: str | None) -> str:
     return "".join((value or "").casefold().split())
+
+
+def _strip_legacy_owned_visuals(draft: HifiMappingDraft) -> HifiMappingDraft:
+    """Quarantine pre-Policy-27 leaf/group ownership from the raw matcher.
+
+    `build_mapping` still contains compatibility heuristics used by older/direct
+    mapping flows. In the PSD semantic-reskin path those ownership decisions are
+    not authoritative: Policy 27 is the single owner of Component/Group bundle
+    allocation. We retain correspondence evidence (`figma_node_id`, score,
+    action) as a hint, but discard prior group/composite pixel ownership.
+    """
+    items = tuple(
+        item.model_copy(update={
+            "owned_source_ids": (),
+            "owned_group_id": None,
+            "retained_source_ids": (),
+            "visual_echo": False,
+            "composite_group_id": None,
+            "composite_source_ids": (),
+        })
+        for item in draft.items
+    )
+    return draft.model_copy(update={"items": items})
 
 
 def _component_pairs(
@@ -182,13 +195,15 @@ def _match_text_children(
     bundle_children: tuple[FguiObjectRef, ...],
     leaves: tuple[SelectionNode, ...],
 ) -> set[str]:
-    """Keep native FairyGUI text objects and restyle them from PSD text."""
+    """Keep native FairyGUI text and use PSD text only as restyle evidence."""
     old_texts = [
-        old for old in bundle_children
+        old
+        for old in bundle_children
         if old.object_type.casefold() in {"text", "richtext"}
     ]
     source_texts = [
-        node for node in leaves
+        node
+        for node in leaves
         if node.type.upper() == "TEXT" and _normalized_text(node.text)
     ]
     matched_ids: set[str] = set()
@@ -229,34 +244,36 @@ def _match_text_children(
     return matched_ids
 
 
-def _host_priority(old: FguiObjectRef) -> tuple[int, int, int, float]:
-    """Prefer existing static raster hosts, then current runtime hosts."""
+def _host_priority(old: FguiObjectRef, item: HifiMappingItem) -> tuple[int, int, int, float, float]:
+    """Prefer static raster hosts, then proven correspondence, then z/area."""
     kind = old.object_type.casefold()
     static = not _state_driven(old) and not _runtime_visual(old)
     raster_host = kind in {"image", "loader"}
     return (
         1 if static else 0,
         1 if raster_host else 0,
-        old.child_index,
-        old.width * old.height,
+        1 if item.figma_node_id else 0,
+        item.score,
+        old.child_index + old.width * old.height / 1_000_000_000,
     )
 
 
-def _proposal_valid(
-    group_id: str,
-    all_local_ids: set[str],
-    proposed: list[tuple[FguiObjectRef, int, HifiMappingItem, set[str]]],
-    validator: OwnedVisualValidator | None,
-) -> bool:
-    if validator is None:
-        return True
-    return all(
-        validator(
-            group_id,
-            frozenset(owned_ids),
-            frozenset(all_local_ids - owned_ids),
-        )
-        for _, _, _, owned_ids in proposed
+def _anchor_node(
+    visual_nodes: tuple[SelectionNode, ...],
+    preferred_id: str | None,
+) -> SelectionNode:
+    for node in visual_nodes:
+        if node.id == preferred_id:
+            return node
+    # Stable visual anchor: prefer the largest rendered leaf, then document/z
+    # order, then id. Never depend on lexicographic min(owned_ids).
+    return max(
+        visual_nodes,
+        key=lambda node: (
+            node.bounds.width * node.bounds.height,
+            node.source_order,
+            node.id,
+        ),
     )
 
 
@@ -267,13 +284,11 @@ def normalize_psd_semantic_reskin(
     *,
     owned_visual_validator: OwnedVisualValidator | None = None,
 ) -> HifiMappingDraft:
-    """Policy 27: Component -> Visual Bundle -> PSD Group is the default unit.
+    """Policy 27: Component -> Visual Bundle -> PSD Group is the PSD default.
 
-    Runtime identity remains in the old FairyGUI component. The PSD group owns
-    the replacement skin. Leaf matching is only an implementation detail used
-    to partition pixels between proven runtime visual hosts; decorative leaves
-    inside an already matched semantic group may not become business-level ADD
-    objects.
+    The runtime Component remains the same object. A matched PSD Group replaces
+    its current visual bundle as one semantic operation. Leaf correspondences
+    are hints only; decorative leaves never create business-level ADD objects.
     """
     if (
         not manifest.top_level_nodes
@@ -281,7 +296,11 @@ def normalize_psd_semantic_reskin(
     ):
         return draft
 
+    # The raw matcher may still emit compatibility-era ownership metadata. Do
+    # not let a legacy leaf allocator compete with Policy 27.
+    draft = _strip_legacy_owned_visuals(draft)
     draft = recover_semantic_component_pairs(inventory, manifest, draft)
+
     nodes = _flatten(manifest)
     parents = _parent_ids(manifest)
     old_by_id = {old.object_id: old for old in inventory.objects}
@@ -309,15 +328,13 @@ def normalize_psd_semantic_reskin(
             current = parents.get(current)
         depth[group_id] = value
 
-    # Nested semantic groups are handled first so a parent bundle cannot steal
-    # child pixels.
+    # Nested semantic groups are handled first so a parent cannot steal child
+    # pixels or flatten a nested component's runtime contract.
     for component_index, component_item, old_component, group in sorted(
         component_pairs,
         key=lambda pair: depth[pair[3].id],
         reverse=True,
     ):
-        # The component root is the semantic MODIFY owner. It intentionally owns
-        # no raster pixels; child visual hosts implement the replacement.
         items[component_index] = component_item.model_copy(update={
             "owned_group_id": group.id,
             "status": "matched",
@@ -363,7 +380,8 @@ def normalize_psd_semantic_reskin(
             if item.old_object_id
         }
         visual_hosts = [
-            old for old in bundle_children
+            old
+            for old in bundle_children
             if (
                 old.object_type.casefold() in _VISUAL_OLD_TYPES
                 and not old.structural_only
@@ -371,124 +389,65 @@ def normalize_psd_semantic_reskin(
             )
         ]
         current_hosts = [
-            old for old in visual_hosts
+            old
+            for old in visual_hosts
             if old.default_visible and _can_own_raster(old)
         ]
 
-        # Preserve only correspondences already proven by the mapper (for
-        # example a runtime icon). Do not create a one-to-one mapping for every
-        # decorative PSD leaf.
-        owners: list[tuple[FguiObjectRef, int, HifiMappingItem]] = []
+        # A semantic bundle has one default raster owner. This intentionally
+        # replaces the old per-leaf partitioner, which was the source of
+        # KEEP+ADD/duplicate-pixel instability. Existing leaf matches influence
+        # host choice but do not create multiple business owners.
+        owner: FguiObjectRef | None = None
+        owner_index: int | None = None
+        owner_item: HifiMappingItem | None = None
+        candidates: list[tuple[FguiObjectRef, int, HifiMappingItem]] = []
         for old in current_hosts:
             index = item_index.get(old.object_id)
             if index is None:
                 continue
-            item = items[index]
-            if (
-                item.action in {"accept", "retarget"}
-                and item.figma_node_id in visual_ids
-            ):
-                owners.append((old, index, item))
+            candidates.append((old, index, items[index]))
+        if candidates:
+            owner, owner_index, owner_item = max(
+                candidates,
+                key=lambda entry: _host_priority(entry[0], entry[2]),
+            )
 
-        # No proven partition: choose one current existing host for the entire
-        # target bundle. This is the default reskin behavior.
-        if not owners and current_hosts:
-            chosen = max(current_hosts, key=_host_priority)
-            index = item_index.get(chosen.object_id)
-            if index is not None:
-                anchor = max(
-                    visual_nodes,
-                    key=lambda node: (
-                        node.bounds.width * node.bounds.height,
-                        node.source_order,
-                        node.id,
-                    ),
+        owner_ids: set[str] = set()
+        if owner is not None and owner_index is not None and owner_item is not None:
+            retained_ids = local_ids - visual_ids
+            valid = (
+                owned_visual_validator is None
+                or owned_visual_validator(
+                    group.id,
+                    frozenset(visual_ids),
+                    frozenset(retained_ids),
                 )
-                item = items[index]
-                owners.append((
-                    chosen,
-                    index,
-                    item.model_copy(update={
-                        "figma_node_id": anchor.id,
-                        "figma_name": anchor.name,
-                        "status": "matched",
-                        "action": "accept",
-                        "visual_disposition": "preserve",
-                        "graph_conversion_proven": (
-                            item.graph_conversion_proven
-                            or (
-                                chosen.object_type.casefold() == "graph"
-                                and chosen.raster_conversion_allowed
-                            )
-                        ),
-                    }),
-                ))
-
-        if owners:
-            anchor_ids = {
-                item.figma_node_id
-                for _, _, item in owners
-                if item.figma_node_id in visual_ids
-            }
-            residual_ids = visual_ids - anchor_ids
-            primary_owner = max(owners, key=lambda entry: _host_priority(entry[0]))
-
-            proposed: list[tuple[FguiObjectRef, int, HifiMappingItem, set[str]]] = []
-            for old, index, item in owners:
-                owned_ids = (
-                    {item.figma_node_id}
-                    if item.figma_node_id in visual_ids
-                    else set()
-                )
-                if old.object_id == primary_owner[0].object_id:
-                    owned_ids |= residual_ids
-                if owned_ids:
-                    proposed.append((old, index, item, owned_ids))
-
-            # Partitioning is optional. If it cannot render faithfully, fall
-            # back to one existing host owning the whole bundle rather than
-            # generating new display objects.
-            if not _proposal_valid(
-                group.id, local_ids, proposed, owned_visual_validator
-            ):
-                old, index, item = primary_owner
-                proposed = [(old, index, item, set(visual_ids))]
-                if not _proposal_valid(
-                    group.id, local_ids, proposed, owned_visual_validator
-                ):
-                    proposed = []
-
-            owner_ids = {old.object_id for old, _, _, _ in proposed}
-            for old, index, item, owned_ids in proposed:
-                anchor_id = (
-                    item.figma_node_id
-                    if item.figma_node_id in owned_ids
-                    else min(owned_ids)
-                )
-                anchor = nodes.get(anchor_id)
-                items[index] = item.model_copy(update={
-                    "figma_node_id": anchor_id,
-                    "figma_name": anchor.name if anchor is not None else item.figma_name,
-                    "owned_source_ids": tuple(sorted(owned_ids)),
+            )
+            if valid:
+                anchor = _anchor_node(visual_nodes, owner_item.figma_node_id)
+                items[owner_index] = owner_item.model_copy(update={
+                    "figma_node_id": anchor.id,
+                    "figma_name": anchor.name,
+                    "owned_source_ids": tuple(sorted(visual_ids)),
                     "owned_group_id": group.id,
-                    "retained_source_ids": tuple(sorted(local_ids - owned_ids)),
+                    "retained_source_ids": tuple(sorted(retained_ids)),
                     "status": "matched",
                     "action": "accept",
                     "visual_disposition": "preserve",
                     "graph_conversion_proven": (
-                        item.graph_conversion_proven
+                        owner_item.graph_conversion_proven
                         or (
-                            old.object_type.casefold() == "graph"
-                            and old.raster_conversion_allowed
+                            owner.object_type.casefold() == "graph"
+                            and owner.raster_conversion_allowed
                         )
                     ),
                 })
-                absorbed_source_ids.update(owned_ids)
-        else:
-            owner_ids = set()
+                absorbed_source_ids.update(visual_ids)
+                owner_ids.add(owner.object_id)
 
-        # Every legacy visual in a paired semantic bundle now needs an explicit
-        # target-state disposition. Silent KEEP is forbidden.
+        # Every old visual in a matched semantic bundle receives an explicit
+        # target-state disposition. Silent current-state KEEP is forbidden.
         for old in visual_hosts:
             if old.object_id in owner_ids:
                 continue
@@ -496,13 +455,12 @@ def normalize_psd_semantic_reskin(
             if index is None:
                 continue
             item = items[index]
+
+            # A source match outside this semantic group belongs to another
+            # proven region and is not rewritten by this bundle.
             if item.figma_node_id is not None and item.figma_node_id not in visual_ids:
                 continue
 
-            # inspect_component_tree resolves runtime initial controller pages
-            # plus instance overrides into default_visible. Hidden state paint
-            # therefore remains available to other states without contributing
-            # pixels to the PSD target state.
             if not old.default_visible:
                 items[index] = item.model_copy(update={
                     "figma_node_id": None,
@@ -533,9 +491,9 @@ def normalize_psd_semantic_reskin(
                 })
                 continue
 
-            # Current-state dynamic/runtime paint with no PSD ownership is a
-            # conflict. Preserve its object and logic, but block candidate
-            # generation instead of emitting old-skin + new-skin pixels.
+            # Current-state dynamic/runtime paint without bundle ownership is
+            # unsafe: keeping it overlays old skin; hiding it can break another
+            # runtime state. Preserve logic and stop candidate generation.
             items[index] = item.model_copy(update={
                 "status": "blocked",
                 "action": None,
@@ -554,8 +512,9 @@ def normalize_psd_semantic_reskin(
             )
         ]
 
-    # Inside a paired Component/PSD Group, leaves are implementation details,
-    # not new UI entities. Residual leaf ADDs are hard mapping failures.
+    # Inside a matched semantic group, residual leaves are implementation
+    # details, never independent ADDs. If a bundle could not absorb them, fail
+    # safe and surface the mapping conflict.
     normalized: list[HifiMappingItem] = []
     for item in items:
         if (
@@ -570,6 +529,24 @@ def normalize_psd_semantic_reskin(
             }))
         else:
             normalized.append(item)
+
+    # Defensive invariant: one PSD visual leaf can have only one target owner.
+    seen_source_ids: set[str] = set()
+    duplicate_source_ids: set[str] = set()
+    for item in normalized:
+        if item.action not in {"accept", "retarget"}:
+            continue
+        for source_id in item.owned_source_ids:
+            if source_id in seen_source_ids:
+                duplicate_source_ids.add(source_id)
+            seen_source_ids.add(source_id)
+    if duplicate_source_ids:
+        normalized = [
+            item.model_copy(update={"status": "blocked", "action": None})
+            if set(item.owned_source_ids).intersection(duplicate_source_ids)
+            else item
+            for item in normalized
+        ]
 
     unresolved = sum(1 for item in normalized if item.action is None)
     return draft.model_copy(update={
