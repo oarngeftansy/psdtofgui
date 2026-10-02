@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from figma_to_fgui.figma_selection import SelectionManifest, SelectionNode
 from figma_to_fgui.hifi_replacement_models import (
+    HIFI_MAPPING_POLICY_REVISION,
     FguiBehaviorSummary,
     FguiComponentInventory,
     FguiObjectRef,
@@ -67,25 +68,12 @@ def _old(
     )
 
 
-def test_recovers_existing_component_from_psd_group_before_leaf_additions() -> None:
-    component = _old("button", "component")
-    loader = _old("icon_bg", "loader", parent_id="button", child_index=0)
-    title = _old(
-        "title",
-        "text",
-        parent_id="button",
-        child_index=1,
-        x=140.0,
-        y=120.0,
-        width=220.0,
-        height=35.0,
-        text="Noble Reception",
-    )
-    inventory = FguiComponentInventory(
+def _inventory(*objects: FguiObjectRef) -> FguiComponentInventory:
+    return FguiComponentInventory(
         target=_target(),
         width=1080.0,
         height=1920.0,
-        objects=(component, loader, title),
+        objects=objects,
         behavior=FguiBehaviorSummary(
             protected_sha256=_SHA,
             gear_count=0,
@@ -96,6 +84,39 @@ def test_recovers_existing_component_from_psd_group_before_leaf_additions() -> N
         expanded_instances=True,
     )
 
+
+def _draft(*items: HifiMappingItem) -> HifiMappingDraft:
+    return HifiMappingDraft(
+        policy_revision=HIFI_MAPPING_POLICY_REVISION,
+        mapping_revision=1,
+        old_canvas_size=(1080.0, 1920.0),
+        source_canvas_size=(1080.0, 1920.0),
+        items=items,
+        unresolved_count=sum(1 for item in items if item.action is None),
+    )
+
+
+def _root(*groups: SelectionNode) -> SelectionManifest:
+    return SelectionManifest(
+        display_name="PSD",
+        top_level_nodes=(SelectionNode(
+            id="psd-root:" + "a" * 64,
+            name="PSD",
+            type="FRAME",
+            bounds=Bounds(x=0.0, y=0.0, width=1080.0, height=1920.0),
+            children=groups,
+        ),),
+    )
+
+
+def test_recovers_existing_component_from_psd_group_before_leaf_additions() -> None:
+    component = _old("button", "component")
+    loader = _old("icon_bg", "loader", parent_id="button", child_index=0)
+    title = _old(
+        "title", "text", parent_id="button", child_index=1,
+        x=140.0, y=120.0, width=220.0, height=35.0,
+        text="Noble Reception",
+    )
     bg = SelectionNode(
         id="bg",
         name="background",
@@ -119,67 +140,34 @@ def test_recovers_existing_component_from_psd_group_before_leaf_additions() -> N
         children=(bg, text),
         properties={"psdKind": "group"},
     )
-    root = SelectionNode(
-        id="psd-root:" + "a" * 64,
-        name="PSD",
-        type="FRAME",
-        bounds=Bounds(x=0.0, y=0.0, width=1080.0, height=1920.0),
-        children=(group,),
-    )
-    manifest = SelectionManifest(display_name="PSD", top_level_nodes=(root,))
-
-    draft = HifiMappingDraft(
-        policy_revision=26,
-        mapping_revision=1,
-        old_canvas_size=(1080.0, 1920.0),
-        source_canvas_size=(1080.0, 1920.0),
-        items=(
-            HifiMappingItem(
-                item_id="old:button",
-                old_object_id="button",
-                old_name="button",
-                old_object_type="component",
-                status="fgui_only",
-                score=0.0,
-                evidence=_evidence(),
-                action="keep_old",
-            ),
-            HifiMappingItem(
-                item_id="old:loader",
-                old_object_id="icon_bg",
-                old_name="icon_bg",
-                old_object_type="loader",
-                status="fgui_only",
-                score=0.0,
-                evidence=_evidence(),
-                action="keep_old",
-            ),
-            HifiMappingItem(
-                item_id="old:title",
-                old_object_id="title",
-                old_name="title",
-                old_object_type="text",
-                status="fgui_only",
-                score=0.0,
-                evidence=_evidence(),
-                action="keep_old",
-            ),
-            HifiMappingItem(
-                item_id="new:bg",
-                figma_node_id="bg",
-                figma_name="background",
-                status="hifi_added",
-                score=0.0,
-                evidence=_evidence(),
-                action="add_visual",
-            ),
+    draft = _draft(
+        HifiMappingItem(
+            item_id="old:button", old_object_id="button", old_name="button",
+            old_object_type="component", status="fgui_only", score=0.0,
+            evidence=_evidence(), action="keep_old",
         ),
-        unresolved_count=0,
+        HifiMappingItem(
+            item_id="old:loader", old_object_id="icon_bg", old_name="icon_bg",
+            old_object_type="loader", status="fgui_only", score=0.0,
+            evidence=_evidence(), action="keep_old",
+        ),
+        HifiMappingItem(
+            item_id="old:title", old_object_id="title", old_name="title",
+            old_object_type="text", status="fgui_only", score=0.0,
+            evidence=_evidence(), action="keep_old",
+        ),
+        HifiMappingItem(
+            item_id="new:bg", figma_node_id="bg", figma_name="background",
+            status="hifi_added", score=0.0, evidence=_evidence(), action="add_visual",
+        ),
     )
 
-    result = recover_semantic_component_pairs(inventory, manifest, draft)
+    result = recover_semantic_component_pairs(
+        _inventory(component, loader, title), _root(group), draft
+    )
     button = next(item for item in result.items if item.old_object_id == "button")
 
+    assert result.policy_revision == HIFI_MAPPING_POLICY_REVISION
     assert button.action == "accept"
     assert button.status == "matched"
     assert button.figma_node_id == "button_group"
@@ -188,20 +176,6 @@ def test_recovers_existing_component_from_psd_group_before_leaf_additions() -> N
 def test_does_not_guess_between_repeated_groups_without_a_clear_margin() -> None:
     component = _old("button", "component")
     loader = _old("icon", "loader", parent_id="button")
-    inventory = FguiComponentInventory(
-        target=_target(),
-        width=1080.0,
-        height=1920.0,
-        objects=(component, loader),
-        behavior=FguiBehaviorSummary(
-            protected_sha256=_SHA,
-            gear_count=0,
-            relation_count=0,
-            action_count=0,
-        ),
-        parse_complete=True,
-        expanded_instances=True,
-    )
     groups = tuple(
         SelectionNode(
             id=f"group_{index}",
@@ -219,36 +193,22 @@ def test_does_not_guess_between_repeated_groups_without_a_clear_margin() -> None
         )
         for index in range(2)
     )
-    root = SelectionNode(
-        id="psd-root:" + "b" * 64,
-        name="PSD",
-        type="FRAME",
-        bounds=Bounds(x=0.0, y=0.0, width=1080.0, height=1920.0),
-        children=groups,
-    )
-    draft = HifiMappingDraft(
-        policy_revision=26,
-        mapping_revision=1,
-        old_canvas_size=(1080.0, 1920.0),
-        source_canvas_size=(1080.0, 1920.0),
-        items=(HifiMappingItem(
-            item_id="old:button",
-            old_object_id="button",
-            old_name="button",
-            old_object_type="component",
-            status="fgui_only",
-            score=0.0,
-            evidence=_evidence(),
-            action="keep_old",
-        ),),
-        unresolved_count=0,
-    )
+    draft = _draft(HifiMappingItem(
+        item_id="old:button",
+        old_object_id="button",
+        old_name="button",
+        old_object_type="component",
+        status="fgui_only",
+        score=0.0,
+        evidence=_evidence(),
+        action="keep_old",
+    ))
 
     result = recover_semantic_component_pairs(
-        inventory,
-        SelectionManifest(display_name="PSD", top_level_nodes=(root,)),
-        draft,
+        _inventory(component, loader), _root(*groups), draft
     )
     button = result.items[0]
+
+    assert result.policy_revision == HIFI_MAPPING_POLICY_REVISION
     assert button.action == "keep_old"
     assert button.figma_node_id is None
