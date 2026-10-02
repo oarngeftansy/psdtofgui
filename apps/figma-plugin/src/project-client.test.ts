@@ -199,7 +199,7 @@ describe("ProjectWorkflowClient", () => {
       });
       if (path.endsWith("/mapping")) return json({
         version: 1,
-        policy_revision: 24,
+        policy_revision: 27,
         mapping_revision: 2,
         old_canvas_size: [800, 600],
         source_canvas_size: [900, 1800],
@@ -215,7 +215,7 @@ describe("ProjectWorkflowClient", () => {
 
     expect(targets.packages[0]?.directories[0]?.components[0]).toMatchObject({ name: "Root", selectable: true });
     expect(mapping.items[0]).toMatchObject({ itemId: "old:title", oldBounds: [.1, .2, .3, .4], figmaBounds: [.12, .2, .3, .4] });
-    expect(mapping.policyRevision).toBe(24);
+    expect(mapping.policyRevision).toBe(27);
     expect(mapping.oldCanvasSize).toEqual({ width: 800, height: 600 });
     expect(mapping.sourceCanvasSize).toEqual({ width: 900, height: 1800 });
     expect(mapping.items[0].ownedSourceIds).toEqual(["12:4", "12:5"]);

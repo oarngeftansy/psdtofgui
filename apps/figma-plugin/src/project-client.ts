@@ -92,7 +92,7 @@ export type HifiMappingItem = {
   logicalBoundsPolicy?: "preserve" | "resize";
 };
 export type HifiMappingDraft = { policyRevision?: number; mappingRevision: number; unresolvedCount: number; oldCanvasSize?: { width: number; height: number }; sourceCanvasSize?: { width: number; height: number }; items: HifiMappingItem[] };
-const HIFI_POLICY_REVISION = 25;
+const HIFI_POLICY_REVISION = 27;
 export type HifiReplacement = { sessionId: string; status: "mapping" | "building" | "review_ready" | "approved" | "rejected" | "failed" | "superseded"; selectionId: string; target: HifiTargetRef; mappingRevision: number; unresolvedCount: number; artifactReady: boolean };
 export type HifiObjectDiff = { itemId: string; kind: "changed" | "added" | "kept" | "exception"; oldObjectId?: string; oldName?: string; figmaNodeId?: string; figmaName?: string; changedFields: string[]; summary: string };
 export type HifiReplacementReview = { sessionId: string; mappingRevision: number; changedFiles: Array<{ relativePath: string; operation: "create" | "replace"; summary: string }>; objectDiffs: HifiObjectDiff[]; protectedChecksPassed: boolean; parseCoverageComplete: boolean; approvable: boolean; candidateSha256?: string; warnings: string[]; editorCheckRequired: boolean };

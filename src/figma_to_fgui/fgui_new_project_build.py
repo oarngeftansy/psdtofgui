@@ -297,22 +297,25 @@ def build_new_project(
             )
         return staged_candidate, archive_sha256, archive_size
 
+    preparation_failure: NewProjectBuildError | None = None
     try:
         staged, archive_sha256, archive_size = prepare_candidate()
-    except NewProjectBuildError:
+    except NewProjectBuildError as error:
         if staged_candidate is not None:
             try:
                 staged_candidate.unlink(missing_ok=True)
             except Exception:  # noqa: BLE001,S110 - preserve the closed failure.
                 pass
-        raise
+        preparation_failure = error
     except Exception:  # noqa: BLE001 - convert unexpected preparation failures at the public boundary.
         if staged_candidate is not None:
             try:
                 staged_candidate.unlink(missing_ok=True)
             except Exception:  # noqa: BLE001,S110 - preserve the closed failure.
                 pass
-        raise _fail("directory-write") from None
+        preparation_failure = _fail("directory-write")
+    if preparation_failure is not None:
+        raise preparation_failure from None
     try:
         published = _run_gate("publish", lambda: atomic_publish(staged, output, manifest))
     except NewProjectBuildError:
