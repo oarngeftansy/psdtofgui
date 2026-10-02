@@ -1,0 +1,124 @@
+name: Policy 27 one-shot native text pairing
+
+on:
+  push:
+    branches:
+      - fix/policy27-semantic-reskin
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/policy27-semantic-reskin
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Implement deterministic native text pairing
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/figma_to_fgui/hifi_semantic_reskin.py')
+          text = path.read_text('utf-8')
+          start = text.index('def _match_text_children(')
+          end = text.index('\ndef _host_priority', start)
+          replacement = '''def _match_text_children(\n    items: list[HifiMappingItem],\n    bundle_children: tuple[FguiObjectRef, ...],\n    leaves: tuple[SelectionNode, ...],\n) -> set[str]:\n    """Pair native FGUI text deterministically inside one semantic group.\n\n    Exact text is accepted only when unique on both sides. After those matches,\n    a single remaining old text and a single remaining PSD text are paired even\n    when the copy changed: the already-proven Component↔Group boundary supplies\n    the semantic evidence. Ambiguous many-to-many text stays unresolved.\n    """\n    old_texts = [\n        old\n        for old in bundle_children\n        if old.object_type.casefold() in {"text", "richtext"}\n    ]\n    source_texts = [\n        node\n        for node in leaves\n        if node.type.upper() == "TEXT" and _normalized_text(node.text)\n    ]\n    if not old_texts or not source_texts:\n        return set()\n\n    item_index = {\n        item.old_object_id: index\n        for index, item in enumerate(items)\n        if item.old_object_id\n    }\n    old_counts: dict[str, int] = {}\n    source_counts: dict[str, int] = {}\n    for old in old_texts:\n        key = _normalized_text(old.effective_text)\n        if key:\n            old_counts[key] = old_counts.get(key, 0) + 1\n    for node in source_texts:\n        key = _normalized_text(node.text)\n        source_counts[key] = source_counts.get(key, 0) + 1\n\n    matched_old_ids: set[str] = set()\n    matched_source_ids: set[str] = set()\n\n    def assign(old: FguiObjectRef, node: SelectionNode) -> bool:\n        index = item_index.get(old.object_id)\n        if index is None:\n            return False\n        item = items[index]\n        items[index] = item.model_copy(update={\n            "figma_node_id": node.id,\n            "figma_name": node.name,\n            "status": "matched",\n            "action": "accept",\n            "visual_disposition": "preserve",\n            "preserve_runtime_text": old.runtime_text_override,\n        })\n        matched_old_ids.add(old.object_id)\n        matched_source_ids.add(node.id)\n        return True\n\n    source_by_key = {\n        _normalized_text(node.text): node\n        for node in source_texts\n        if source_counts.get(_normalized_text(node.text)) == 1\n    }\n    for old in old_texts:\n        key = _normalized_text(old.effective_text)\n        if not key or old_counts.get(key) != 1 or source_counts.get(key) != 1:\n            continue\n        node = source_by_key.get(key)\n        if node is not None:\n            assign(old, node)\n\n    remaining_old = [old for old in old_texts if old.object_id not in matched_old_ids]\n    remaining_source = [\n        node for node in source_texts if node.id not in matched_source_ids\n    ]\n    if len(remaining_old) == 1 and len(remaining_source) == 1:\n        assign(remaining_old[0], remaining_source[0])\n\n    return matched_source_ids\n\n'''
+          path.write_text(text[:start] + replacement + text[end + 1:], 'utf-8')
+
+          test = Path('tests/unit/test_hifi_semantic_reskin.py')
+          text = test.read_text('utf-8')
+          addition = r'''
+
+
+def test_single_changed_label_reuses_native_text_inside_semantic_group() -> None:
+    component = _old("button", "component")
+    loader = _old("skin", "loader", parent_id="button", child_index=0)
+    title = _old(
+        "title", "text", parent_id="button", child_index=1,
+        effective_text="Old Label",
+    )
+    bg = _node("bg", "pixel")
+    new_text = _node(
+        "new_title", "type", node_type="TEXT", text="New Label", order=1
+    )
+    group = _node(
+        "button_group", "group", node_type="GROUP", children=(bg, new_text)
+    )
+    draft = _draft(
+        _item("component", old=component, node=group, status="matched", action="accept"),
+        _item("loader", old=loader, node=bg, status="matched", action="accept"),
+        _item("title", old=title),
+        _item("new-title", node=new_text, status="hifi_added", action="add_visual"),
+    )
+
+    result = normalize_psd_semantic_reskin(
+        _inventory(component, loader, title),
+        _manifest(group),
+        draft,
+        owned_visual_validator=lambda _group, _owned, _retained: True,
+    )
+    mapped = next(item for item in result.items if item.old_object_id == "title")
+    assert mapped.action == "accept"
+    assert mapped.figma_node_id == "new_title"
+    assert not any(
+        item.old_object_id is None and item.figma_node_id == "new_title"
+        for item in result.items
+    )
+
+
+def test_duplicate_old_text_does_not_double_claim_one_psd_text() -> None:
+    component = _old("card", "component")
+    loader = _old("skin", "loader", parent_id="card", child_index=0)
+    first = _old(
+        "first", "text", parent_id="card", child_index=1, effective_text="Same"
+    )
+    second = _old(
+        "second", "text", parent_id="card", child_index=2, effective_text="Same"
+    )
+    bg = _node("bg", "pixel")
+    only_text = _node("only", "type", node_type="TEXT", text="Same", order=1)
+    group = _node("card_group", "group", node_type="GROUP", children=(bg, only_text))
+    draft = _draft(
+        _item("component", old=component, node=group, status="matched", action="accept"),
+        _item("loader", old=loader, node=bg, status="matched", action="accept"),
+        _item("first", old=first),
+        _item("second", old=second),
+        _item("new-text", node=only_text, status="hifi_added", action="add_visual"),
+    )
+
+    result = normalize_psd_semantic_reskin(
+        _inventory(component, loader, first, second),
+        _manifest(group),
+        draft,
+        owned_visual_validator=lambda _group, _owned, _retained: True,
+    )
+    claimers = [
+        item for item in result.items
+        if item.old_object_id in {"first", "second"} and item.figma_node_id == "only"
+    ]
+    assert claimers == []
+'''
+          if 'test_single_changed_label_reuses_native_text_inside_semantic_group' not in text:
+              test.write_text(text + addition, 'utf-8')
+          PY
+          python -m pip install 'ruff==0.16.10'
+          python -m ruff check --fix \
+            src/figma_to_fgui/hifi_semantic_reskin.py \
+            tests/unit/test_hifi_semantic_reskin.py
+          rm .github/workflows/policy27-textfix.yml
+      - name: Commit text mapping hardening
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Make Policy 27 native text pairing deterministic'
+          git push origin HEAD:fix/policy27-semantic-reskin
