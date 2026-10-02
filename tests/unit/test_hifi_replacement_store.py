@@ -48,6 +48,25 @@ def test_store_is_idempotent_and_isolates_owner(tmp_path: Path) -> None:
         store.get(first.view.session_id, "owner-b")
 
 
+def test_same_request_key_gets_a_new_session_after_policy_upgrade(tmp_path: Path) -> None:
+    store = HifiReplacementStore(tmp_path)
+    target, mapping = _values()
+    selection_id = uuid.uuid4().hex
+    old_policy = mapping.model_copy(update={
+        "policy_revision": max(0, HIFI_MAPPING_POLICY_REVISION - 1),
+    })
+    current_policy = mapping.model_copy(update={
+        "policy_revision": HIFI_MAPPING_POLICY_REVISION,
+    })
+
+    old = store.begin("owner", selection_id, target, old_policy, "same-request")
+    current = store.begin("owner", selection_id, target, current_policy, "same-request")
+
+    assert old.view.session_id != current.view.session_id
+    assert old.mapping.policy_revision != current.mapping.policy_revision
+    assert current.mapping.policy_revision == HIFI_MAPPING_POLICY_REVISION
+
+
 def test_new_mapping_supersedes_in_flight_candidate_without_failed_overwrite(
     tmp_path: Path,
 ) -> None:
