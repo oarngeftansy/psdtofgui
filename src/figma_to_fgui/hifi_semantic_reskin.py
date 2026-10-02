@@ -116,14 +116,19 @@ def _can_own_raster(old: FguiObjectRef) -> bool:
 
 
 def _safe_static_retire(old: FguiObjectRef, old_by_id: dict[str, FguiObjectRef]) -> bool:
-    """Authorize target-state retirement only for static legacy paint."""
+    """Authorize target-state retirement only for static legacy paint.
+
+    `behavior_protected` is intentionally not used here because every expanded
+    nested object is protected at the instance boundary. Policy 27 preserves
+    that runtime identity separately; retirement is decided from the object's
+    actual visual/state roles instead.
+    """
     if (
         not old.default_visible
         or old.structural_only
         or old.object_type.casefold() not in {"graph", "image"}
         or _state_driven(old)
         or _runtime_visual(old)
-        or old.behavior_protected
     ):
         return False
     parent = old_by_id.get(old.parent_id or "")
