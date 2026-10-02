@@ -143,9 +143,10 @@ class HifiReplacementStore:
     ) -> StoredHifiReplacement:
         # Mapping policy is part of the meaning of a replacement request. A
         # caller may legitimately reuse the same request key after a policy
-        # upgrade; returning a cached policy-26 session to policy-27 code would
-        # skip the new semantic mapping entirely. Namespace idempotency by the
-        # effective policy so every policy gets one stable session of its own.
+        # upgrade; returning a cached older-policy session to current-policy
+        # code would skip the new semantic mapping entirely. Namespace
+        # idempotency by the effective policy so every policy gets one stable
+        # session of its own.
         policy_key = f"{idempotency_key}:policy:{mapping.policy_revision}"
         with self._connect() as connection:
             existing = connection.execute(
