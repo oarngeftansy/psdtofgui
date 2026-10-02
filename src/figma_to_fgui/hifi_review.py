@@ -55,18 +55,29 @@ def build_object_diffs(
             )
             if before is not None and after is not None and before.tag != after.tag:
                 changed_fields = ("objectType", *changed_fields)
-            kind: Literal["changed", "added", "kept", "exception"] = (
-                "changed" if changed_fields else "kept"
+
+            semantic_component_reskin = (
+                item.old_object_type == "component"
+                and item.owned_group_id is not None
+                and not item.owned_source_ids
             )
-            summary = (
-                f"修改视觉字段：{', '.join(changed_fields)}"
-                if changed_fields
-                else "映射已确认，候选内容无需修改"
-            )
+            if semantic_component_reskin:
+                kind: Literal["changed", "added", "kept", "exception"] = "changed"
+                changed_fields = tuple(dict.fromkeys(("visualBundle", *changed_fields)))
+                summary = (
+                    "MODIFY：保留 Component 程序契约；Visual Bundle 按 PSD Group 整体换皮"
+                )
+            else:
+                kind = "changed" if changed_fields else "kept"
+                summary = (
+                    f"修改视觉字段：{', '.join(changed_fields)}"
+                    if changed_fields
+                    else "映射已确认，候选内容无需修改"
+                )
         elif item.action == "add_visual":
             kind = "added"
             changed_fields = ("displayList",)
-            summary = "新增私有静态视觉对象"
+            summary = "新增独立语义视觉对象"
         elif item.action == "preserve_structure":
             kind = "kept"
             changed_fields = ()
@@ -74,18 +85,22 @@ def build_object_diffs(
         elif item.action == "keep_old":
             if item.visual_disposition == "retire":
                 kind = "changed"
-                changed_fields = ("visible",)
+                changed_fields = ("targetStateVisual",)
                 summary = "保留旧对象身份与程序关系；目标状态停止贡献旧视觉"
+            elif item.visual_disposition == "other_state":
+                kind = "kept"
+                changed_fields = ()
+                summary = "保留程序对象与其他状态视觉；当前目标状态不贡献像素"
             else:
                 kind = "kept"
                 changed_fields = ()
-                summary = "HIFI 中无对应对象，保留旧 FGUI 对象"
+                summary = "保留旧 FGUI 对象与当前视觉"
         else:
             kind = "exception"
             changed_fields = ()
             summary = (
-                "PSD 未绘制该对象；候选隐藏其默认视觉，对象与程序逻辑保留"
-                if item.status == "fgui_only"
+                "当前状态视觉所有权未证明；保留程序逻辑并阻止生成候选"
+                if item.status == "blocked"
                 else "此项超出安全自动修改范围，候选未修改"
             )
         result.append(
