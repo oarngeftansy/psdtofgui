@@ -256,11 +256,12 @@ def test_group_reskin_uses_proven_runtime_partition_and_bundles_residuals() -> N
     )
     by_old = {item.old_object_id: item for item in result.items if item.old_object_id}
 
-    assert set(by_old["icon_bg"].owned_source_ids) == {
-        "back", "front", "center_ornament"
+    assert set(by_old["icon_bg"].owned_source_ids) == {"front"}
+    assert set(by_old["legacy_back"].owned_source_ids) == {
+        "back", "center_ornament"
     }
-    assert by_old["legacy_back"].visual_disposition == "retire"
-    assert by_old["legacy_back"].action == "keep_old"
+    assert by_old["legacy_back"].action == "accept"
+    assert by_old["legacy_back"].visual_disposition == "preserve"
     assert not any(item.status == "hifi_added" for item in result.items)
 
 

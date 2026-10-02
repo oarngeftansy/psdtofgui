@@ -448,38 +448,119 @@ def normalize_psd_semantic_reskin(
             if old.default_visible and _can_own_target_bundle(old)
         ]
 
-        # One semantic component has one default target-bundle raster owner.
+        # Policy 27 uses a deterministic hybrid ownership model:
+        # - proven runtime/state hosts may keep exactly their directly matched
+        #   PSD leaf when that host is safe for target-bundle replacement;
+        # - exactly one primary host owns every residual decorative leaf;
+        # - free hosts are never assigned arbitrary leaves merely to reduce ADD.
+        # This preserves runtime-specific icon/state contracts without reviving
+        # the compatibility-era per-leaf partitioner.
         candidates: list[tuple[FguiObjectRef, int, HifiMappingItem]] = []
         for old in current_hosts:
             index = item_index.get(old.object_id)
             if index is not None:
                 candidates.append((old, index, items[index]))
-        owner = max(
-            candidates,
+
+        direct_runtime: list[tuple[FguiObjectRef, int, HifiMappingItem]] = []
+        direct_source_ids: set[str] = set()
+        ambiguous_direct_ids: set[str] = set()
+        for candidate in candidates:
+            old, _, item = candidate
+            source_id = item.figma_node_id
+            if (
+                source_id in visual_ids
+                and item.action in {"accept", "retarget"}
+                and (_runtime_visual(old) or _state_driven(old))
+            ):
+                if source_id in direct_source_ids:
+                    ambiguous_direct_ids.add(source_id)
+                direct_source_ids.add(source_id)
+                direct_runtime.append(candidate)
+
+        if ambiguous_direct_ids:
+            # Two runtime/state objects claiming one PSD leaf is not a stable
+            # partition. Leave both unresolved instead of selecting by order.
+            for old, index, item in direct_runtime:
+                if item.figma_node_id in ambiguous_direct_ids:
+                    items[index] = item.model_copy(update={
+                        "figma_node_id": None,
+                        "figma_name": None,
+                        "figma_bounds": None,
+                        "status": "blocked",
+                        "action": None,
+                    })
+            direct_runtime = [
+                entry for entry in direct_runtime
+                if entry[2].figma_node_id not in ambiguous_direct_ids
+            ]
+
+        dedicated_ids = {old.object_id for old, _, _ in direct_runtime}
+        residual_ids = visual_ids - {
+            item.figma_node_id
+            for _, _, item in direct_runtime
+            if item.figma_node_id is not None
+        }
+
+        primary_candidates = [
+            entry for entry in candidates if entry[0].object_id not in dedicated_ids
+        ]
+        if not primary_candidates and direct_runtime:
+            # A component with only one safe runtime visual host (common for
+            # button skins) may use that host as both dedicated and primary.
+            primary_candidates = direct_runtime
+        primary = max(
+            primary_candidates,
             key=lambda entry: _host_priority(entry[0], entry[2]),
             default=None,
         )
 
-        owner_ids: set[str] = set()
-        if owner is not None:
-            old_owner, owner_index, owner_item = owner
-            retained_ids = local_ids - visual_ids
-            valid = (
-                owned_visual_validator is None
-                or owned_visual_validator(
-                    group.id,
-                    frozenset(visual_ids),
-                    frozenset(retained_ids),
-                )
+        proposed: list[tuple[FguiObjectRef, int, HifiMappingItem, set[str]]] = []
+        for old, index, item in direct_runtime:
+            source_id = item.figma_node_id
+            owned = {source_id} if source_id in visual_ids else set()
+            if owned:
+                proposed.append((old, index, item, owned))
+
+        if primary is not None and residual_ids:
+            old, index, item = primary
+            existing = next(
+                (owned for candidate_old, _, _, owned in proposed
+                 if candidate_old.object_id == old.object_id),
+                None,
             )
-            if valid:
-                anchor = _anchor_node(visual_nodes, owner_item.figma_node_id)
+            if existing is not None:
+                existing.update(residual_ids)
+            else:
+                proposed.append((old, index, item, set(residual_ids)))
+
+        # If no dedicated partition exists, the primary host owns the complete
+        # target bundle. This is the normal pure-reskin path.
+        if not proposed and primary is not None:
+            old, index, item = primary
+            proposed.append((old, index, item, set(visual_ids)))
+
+        valid_proposal = bool(proposed)
+        if valid_proposal and owned_visual_validator is not None:
+            valid_proposal = all(
+                owned_visual_validator(
+                    group.id,
+                    frozenset(owned_ids),
+                    frozenset(local_ids - owned_ids),
+                )
+                for _, _, _, owned_ids in proposed
+            )
+
+        owner_ids: set[str] = set()
+        if valid_proposal:
+            for old_owner, owner_index, owner_item, owned_ids in proposed:
+                owned_nodes = tuple(node for node in visual_nodes if node.id in owned_ids)
+                anchor = _anchor_node(owned_nodes, owner_item.figma_node_id)
                 items[owner_index] = owner_item.model_copy(update={
                     "figma_node_id": anchor.id,
                     "figma_name": anchor.name,
-                    "owned_source_ids": tuple(sorted(visual_ids)),
+                    "owned_source_ids": tuple(sorted(owned_ids)),
                     "owned_group_id": group.id,
-                    "retained_source_ids": tuple(sorted(retained_ids)),
+                    "retained_source_ids": tuple(sorted(local_ids - owned_ids)),
                     "status": "matched",
                     "action": "accept",
                     "visual_disposition": "preserve",
@@ -491,7 +572,7 @@ def normalize_psd_semantic_reskin(
                         )
                     ),
                 })
-                absorbed_source_ids.update(visual_ids)
+                absorbed_source_ids.update(owned_ids)
                 owner_ids.add(old_owner.object_id)
 
         # Every old visual gets an explicit target-state disposition. A raw
