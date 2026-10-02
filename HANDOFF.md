@@ -86,15 +86,21 @@ PSD Semantic Group
 
 Policy 27 的 `normalize_psd_semantic_reskin()` 是 PSD Semantic Group / Visual Bundle ownership 的唯一权威层。
 
-旧 `build_mapping()` 中仍可能存在用于历史兼容或非语义流程的 leaf/group heuristics；其 `owned_*` / `composite_*` 结果进入 Policy 27 前会被清空，只保留 correspondence evidence 作为提示，不能与 Policy 27 竞争像素 ownership。
+旧 `build_mapping()` 中仍可能存在用于历史兼容或非语义流程的 leaf/group heuristics；其 `owned_*` / `composite_*` 结果进入 Policy 27 前会被清空。兼容层只提供可重新验证的 correspondence evidence，不能与 Policy 27 竞争像素 ownership。
 
 这样避免同一 PSD Group 被两套算法分别拆分，造成 KEEP / ADD 比例漂移或重复绘制。
 
 ## 7. 当前稳定性约束
 
-- 同一 semantic bundle 默认只选择一个现有 raster-capable visual host 承担完整 Target Visual Bundle。
-- host 选择优先静态现有 host，再考虑已有 correspondence evidence；避免装饰 leaf 被拆成多个新增对象。
-- Anchor 选择使用稳定视觉规则（优先已有对应，否则最大可见 leaf + source order），不再依赖 `min(source_id)` 这种 ID 偶然排序。
+Target Visual Bundle 可以落到一个或多个**现有** FGUI visual host，但分配规则固定：
+
+- 已有直接证据、且允许目标态换皮的 runtime/state host，只保留自己的直接 PSD leaf，例如独立 icon。
+- 剩余 background / border / ornament / glow 统一由一个 primary existing host 吸收。
+- 不允许为了降低 ADD 数量，把剩余 leaf 随机分给空闲 host。
+- 两个 runtime/state host 抢同一个 PSD leaf 时必须 BLOCK。
+- 如果只有一个安全 host，它可以承担完整 Target Visual Bundle。
+- 带 GearXY / GearSize / GearLook / GearColor / GearAnimation 等会改变几何或外观状态的 host，未证明 page-level ownership 前不能直接承担整包皮肤。
+- Anchor 选择使用稳定视觉规则（优先已有直接对应，否则最大可见 leaf + source order），不依赖 source-id 字典序。
 - Policy revision 已参与 replacement session 的 idempotency key，升级 policy 后不会误复用旧 mapping session。
 
 ## 8. 验收门槛
@@ -125,7 +131,15 @@ Policy 27 已统一 mapping 架构，但以下属于独立的渲染精度问题�
 
 这些问题不能通过重新引入参考图裁片或新增覆盖对象解决。
 
-## 10. 当前开发分支
+## 10. 当前质量门槛
+
+- Ruff 必须通过。
+- Policy 27 专项 regression tests 必须通过。
+- Policy 27 核心模块单独执行 strict mypy。
+- 仓库历史 mypy 债务使用非递增 ceiling 监控，禁止继续增长。
+- Linux CI 不应把 Windows-only integration case 当成通用单测执行；对应功能需要独立 Windows gate。
+
+## 11. 当前开发分支
 
 - Branch: `fix/policy27-semantic-reskin`
 - PR: #3
