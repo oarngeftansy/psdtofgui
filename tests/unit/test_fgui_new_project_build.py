@@ -432,8 +432,10 @@ def test_staging_double_failure_attempts_fd_and_path_cleanup_without_leaking(
         staged.write_bytes(b"reserved")
         return 987654, str(staged)
 
-    def fail_close(_descriptor: int) -> None:
+    def fail_close(descriptor: int) -> None:
         nonlocal close_attempts
+        if descriptor != 987654:
+            return
         close_attempts += 1
         raise RuntimeError(marker)
 
